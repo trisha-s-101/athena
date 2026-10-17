@@ -17,8 +17,8 @@ fixturesDir = Path(__file__).resolve().parents[2] / "db" / "tests" / "fixtures"
 
 
 def makeUnit(unitId: str, expiresAt: str = "2026-01-12T08:00:00Z", hospitalId: str = "H01",
-             bloodGroup: str = "A+") -> dict:
-    return {"unitId": unitId, "bloodGroup": bloodGroup, "collectedAt": "2026-01-05T08:00:00Z",
+             bloodGroup: str = "A+", collectedAt: str = "2026-01-05T08:00:00Z") -> dict:
+    return {"unitId": unitId, "bloodGroup": bloodGroup, "collectedAt": collectedAt,
             "expiresAt": expiresAt, "hospitalId": hospitalId, "status": "available"}
 
 
@@ -182,6 +182,69 @@ class DatabaseApiTest(ServerTestCase):
             "simTime": "2026-01-06T01:00:00Z", "unitsAvailable": 3, "expiringIn24h": 1, "wastedToday": 0,
             "shortagesToday": 0, "transfersToday": 0, "wasteRate": 0.25,
         })
+
+    def transfuseAt(self, simTime: str, unitIds: list[str], hospitalId: str = "H01"):
+        self.feed({"type": "clock", "simTime": simTime})
+        for unitId in unitIds:
+            self.deliver(makeUnit(unitId, hospitalId=hospitalId, collectedAt=simTime))
+            self.feed({"type": "transfusion", "unitId": unitId})
+
+    def testRecommendationsMoveSurplusToForecastShortfall(self):
+        # H01 used 2 A+ units on each of Mon 5 and Tue 6 Jan, so the engine forecasts 2 a day there.
+        self.transfuseAt("2026-01-05T10:00:00Z", ["U000001", "U000002"])
+        self.transfuseAt("2026-01-06T10:00:00Z", ["U000003", "U000004"])
+        self.feed({"type": "clock", "simTime": "2026-01-07T06:00:00Z"})
+        # H03 has no demand and a unit expiring in 36h.
+        self.deliver(makeUnit("U000005", hospitalId="H03", collectedAt="2026-01-01T18:00:00Z",
+                              expiresAt="2026-01-08T18:00:00Z"))
+        status, transfers = self.request("GET", "/recommendations")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(transfers), 1)
+        self.assertEqual({key: transfers[0][key] for key in ("unitId", "fromHospitalId", "toHospitalId",
+                                                              "travelMinutes", "hoursToExpiry")},
+                         {"unitId": "U000005", "fromHospitalId": "H03", "toHospitalId": "H01",
+                          "travelMinutes": 42, "hoursToExpiry": 36.0})
+        self.assertEqual(set(transfers[0]), {"unitId", "fromHospitalId", "toHospitalId", "travelMinutes",
+                                             "hoursToExpiry", "score", "reason"})
+        # A reserved unit is no longer offered.
+        self.reserve("U000005", "H01")
+        self.assertEqual(self.request("GET", "/recommendations"), (200, []))
+
+    def testRecommendationsEmptyWithoutHistory(self):
+        self.deliver(makeUnit("U000001", hospitalId="H03"))
+        self.assertEqual(self.request("GET", "/recommendations"), (200, []))
+
+    def testEmergencyRanksCompatibleSourcesElsewhere(self):
+        self.feed({"type": "clock", "simTime": "2026-01-05T12:00:00Z"})
+        self.deliver(makeUnit("U000001", bloodGroup="O-", hospitalId="H02"))
+        self.deliver(makeUnit("U000002", bloodGroup="A-", hospitalId="H03", expiresAt="2026-01-06T12:00:00Z"))
+        self.deliver(makeUnit("U000003", bloodGroup="A-", hospitalId="H01"))  # the requester's own stock
+        self.deliver(makeUnit("U000004", bloodGroup="A+", hospitalId="H02"))  # RhD-positive: not allowed
+        status, sources = self.request("POST", "/emergency", {"hospitalId": "H01", "bloodGroup": "A-", "unitsNeeded": 1})
+        self.assertEqual(status, 200)
+        self.assertEqual(sources, [
+            {"unitId": "U000002", "hospitalId": "H03", "bloodGroup": "A-", "hoursToExpiry": 24.0,
+             "travelMinutes": 42, "penalty": 0, "rank": 1},
+            {"unitId": "U000001", "hospitalId": "H02", "bloodGroup": "O-", "hoursToExpiry": 164.0,
+             "travelMinutes": 27, "penalty": 3, "rank": 2},
+        ])
+        self.assertEqual(self.request("POST", "/emergency", {"hospitalId": "H99", "bloodGroup": "A-", "unitsNeeded": 1}),
+                         (400, {"error": "unknownHospital"}))
+
+    def testEventsNewestFirstWithoutClockTicks(self):
+        self.feed({"type": "clock", "simTime": "2026-01-05T09:00:00Z"})
+        self.deliver(makeUnit("U000001"))
+        self.feed({"type": "clock", "simTime": "2026-01-05T10:00:00Z"})
+        self.reserve("U000001")
+        status, events = self.request("GET", "/events")
+        self.assertEqual(status, 200)
+        self.assertEqual([(event["eventId"], event["type"]) for event in events],
+                         [("E000004", "reservation"), ("E000002", "delivery")])
+        self.assertEqual(events[1], {"eventId": "E000002", "type": "delivery", "unitId": "U000001",
+                                     "hospitalId": "H01", "at": "2026-01-05T09:00:00Z",
+                                     "detail": "Unit U000001 (A+) delivered to H01"})
+        self.assertEqual(len(self.request("GET", "/events?limit=1")[1]), 1)
+        self.assertEqual(self.request("GET", "/events?limit=0"), (400, {"error": "invalidRequest"}))
 
     def testConcurrentReservationsOverHttpGiveExactlyOne201(self):
         self.deliver(makeUnit("U000001"))

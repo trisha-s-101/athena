@@ -1,9 +1,8 @@
 """Platelet exchange HTTP API (CONTRACT.md section 8).
 
-Real (Postgres): /health, /hospitals, /stock, /metrics, /feed/events, /reservations,
-/reservations/{id}/complete.
-Still stubs returning the contract's example JSON: /recommendations, /emergency, /events.
-/simulation/results serves results/comparison.json when it exists.
+Every endpoint reads Postgres except /simulation/results, which serves results/comparison.json
+(or the contract's example before the sim has written one). /recommendations and /emergency
+pass current stock to the engine (contract section 6).
 
 Run from the repo root with DATABASE_URL set: uvicorn api.main:app --host 0.0.0.0 --port 8000
 """
@@ -13,14 +12,16 @@ import platform
 from pathlib import Path
 
 import psycopg2
-from fastapi import APIRouter, Body, FastAPI, Request
+from fastapi import APIRouter, Body, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+import engine
 from api import examples
 from api.database import DatabaseUnavailable, currentSimTime, isDatabaseOk, toIsoTime, transaction
+from api.engineInputs import fetchAvailableStock, fetchDemandHistory, fetchTravelTimes, loadCompatibility
 from api.models import EmergencyRequest, FeedEvent, ReservationRequest
 
 repoRoot = Path(__file__).resolve().parent.parent
@@ -142,7 +143,14 @@ def getStock(hospitalId: str | None = None):
 
 @router.get("/recommendations")
 def getRecommendations():
-    return [examples.exampleTransfer]
+    with transaction() as cursor:
+        simTime = currentSimTime(cursor)
+        stock = fetchAvailableStock(cursor)
+        travelTimes = fetchTravelTimes(cursor)
+        history = fetchDemandHistory(cursor, simTime)
+    forecast = engine.forecastDemand(history)
+    transfers = engine.recommendTransfers(stock, forecast, travelTimes, loadCompatibility(), simTime)
+    return [{**transfer, "hoursToExpiry": round(transfer["hoursToExpiry"], 1)} for transfer in transfers]
 
 
 @router.post("/reservations", status_code=201)
@@ -208,7 +216,18 @@ def completeReservation(reservationId: str):
 
 @router.post("/emergency")
 def createEmergency(request: EmergencyRequest):
-    return [examples.exampleEmergencySource]
+    """Ranks every compatible source, not just unitsNeeded, so a lost reservation race has fallbacks."""
+    with transaction() as cursor:
+        cursor.execute("SELECT 1 FROM hospitals WHERE hospital_id = %s", (request.hospitalId,))
+        if cursor.fetchone() is None:
+            raise ApiError(400, "unknownHospital")
+        simTime = currentSimTime(cursor)
+        stock = fetchAvailableStock(cursor)
+        travelTimes = fetchTravelTimes(cursor)
+    emergencyRequest = {"hospitalId": request.hospitalId, "bloodGroup": request.bloodGroup,
+                        "unitsNeeded": request.unitsNeeded}
+    sources = engine.rankEmergencySources(emergencyRequest, stock, travelTimes, loadCompatibility(), simTime)
+    return [{**source, "hoursToExpiry": round(source["hoursToExpiry"], 1)} for source in sources]
 
 
 @router.get("/metrics")
@@ -241,8 +260,18 @@ def getMetrics():
 
 
 @router.get("/events")
-def getEvents(limit: int = 50):
-    return [examples.exampleEvent][:limit]
+def getEvents(limit: int = Query(50, ge=1, le=500)):
+    """Newest first. Clock ticks are left out: they'd bury every real event in the feed."""
+    with transaction() as cursor:
+        cursor.execute(
+            "SELECT event_id, type, unit_id, hospital_id, at, detail FROM events "
+            "WHERE type <> 'clock' ORDER BY event_number DESC LIMIT %s",
+            (limit,),
+        )
+        rows = cursor.fetchall()
+    return [{"eventId": eventId, "type": eventType, "unitId": unitId, "hospitalId": hospitalId,
+             "at": toIsoTime(at), "detail": detail}
+            for eventId, eventType, unitId, hospitalId, at, detail in rows]
 
 
 @router.get("/simulation/results")
