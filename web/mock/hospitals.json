@@ -1,0 +1,122 @@
+[
+  {
+    "hospitalId": "H01",
+    "name": "Manchester Royal Infirmary",
+    "lat": 53.4627,
+    "lng": -2.2265,
+    "sizeCategory": "large",
+    "hasHaematology": true,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 2
+    }
+  },
+  {
+    "hospitalId": "H02",
+    "name": "Salford Royal",
+    "lat": 53.487,
+    "lng": -2.3246,
+    "sizeCategory": "large",
+    "hasHaematology": true,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  },
+  {
+    "hospitalId": "H03",
+    "name": "Wythenshawe Hospital",
+    "lat": 53.3884,
+    "lng": -2.2916,
+    "sizeCategory": "large",
+    "hasHaematology": true,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  },
+  {
+    "hospitalId": "H04",
+    "name": "Royal Bolton Hospital",
+    "lat": 53.553,
+    "lng": -2.429,
+    "sizeCategory": "medium",
+    "hasHaematology": false,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 1
+    }
+  },
+  {
+    "hospitalId": "H05",
+    "name": "Royal Oldham Hospital",
+    "lat": 53.5526,
+    "lng": -2.1379,
+    "sizeCategory": "medium",
+    "hasHaematology": false,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  },
+  {
+    "hospitalId": "H06",
+    "name": "Fairfield General Hospital",
+    "lat": 53.5937,
+    "lng": -2.2744,
+    "sizeCategory": "medium",
+    "hasHaematology": false,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  },
+  {
+    "hospitalId": "H07",
+    "name": "Stepping Hill Hospital",
+    "lat": 53.3843,
+    "lng": -2.1326,
+    "sizeCategory": "large",
+    "hasHaematology": true,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  },
+  {
+    "hospitalId": "H08",
+    "name": "Tameside General Hospital",
+    "lat": 53.4891,
+    "lng": -2.0696,
+    "sizeCategory": "medium",
+    "hasHaematology": false,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  },
+  {
+    "hospitalId": "H09",
+    "name": "Royal Albert Edward Infirmary",
+    "lat": 53.5603,
+    "lng": -2.6223,
+    "sizeCategory": "medium",
+    "hasHaematology": false,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  },
+  {
+    "hospitalId": "H10",
+    "name": "Rochdale Infirmary",
+    "lat": 53.623,
+    "lng": -2.1568,
+    "sizeCategory": "small",
+    "hasHaematology": false,
+    "stockSummary": {
+      "available": 8,
+      "expiringIn24h": 0
+    }
+  }
+]
