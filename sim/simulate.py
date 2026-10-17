@@ -11,7 +11,9 @@ The sim clock ticks in 6-hour steps. Each tick:
      and dispatch recommended transfers.
   5. At midnight (step 0 of each day): issue FIFO demand and record daily stats.
 
-FIFO issuing: oldest unit (by collectedAt) is transfused first.
+FIFO issuing: within a blood group the oldest unit (by collectedAt) goes
+first. Demand that an identical group cannot cover falls back to compatible
+donor groups from shared/compatibility.json, in penalty order.
 """
 
 import copy
@@ -94,13 +96,19 @@ def _stubRecommendTransfers(*args, **kwargs) -> list[dict]:
     return []
 
 
+def _stubRankEmergencySources(*args, **kwargs) -> list[dict]:
+    return []
+
+
 try:
     import engine as _engine
     _forecastDemand = _engine.forecastDemand
     _recommendTransfers = _engine.recommendTransfers
+    _rankEmergencySources = _engine.rankEmergencySources
 except Exception:
     _forecastDemand = _stubForecast
     _recommendTransfers = _stubRecommendTransfers
+    _rankEmergencySources = _stubRankEmergencySources
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +277,7 @@ def simulateEvents(scenario: dict, policyName: str, seed: int):
 
         # 5. Issue FIFO demand at end of day
         dayDemand = demandIdx.get(dateStr, {})
+        issueIso = _isoUtc(dayStart + timedelta(hours=_STEP_HOURS * (_STEPS_PER_DAY - 1)))
         for hospitalId, bgDemand in dayDemand.items():
             inv = inventory.get(hospitalId, [])
             for bloodGroup, unitsNeeded in bgDemand.items():
@@ -279,10 +288,16 @@ def simulateEvents(scenario: dict, policyName: str, seed: int):
                     "units": unitsNeeded,
                 })
 
-                # FIFO: sort available units by collectedAt (oldest first)
+                # Issue an identical group first, then compatible donors in
+                # penalty order, oldest first within each. Exact-match-only
+                # issuing logs a shortage while a usable unit expires on the
+                # same shelf, which no hospital would do.
+                penalties = {entry["donor"]: entry["penalty"]
+                             for entry in compatibility.get(bloodGroup, [])}
+                penalties.setdefault(bloodGroup, 0)
                 available = sorted(
-                    [u for u in inv if u["status"] == "available" and u["bloodGroup"] == bloodGroup],
-                    key=lambda u: u["collectedAt"],
+                    [u for u in inv if u["status"] == "available" and u["bloodGroup"] in penalties],
+                    key=lambda u: (penalties[u["bloodGroup"]], u["collectedAt"]),
                 )
                 toTransfuse = min(unitsNeeded, len(available))
                 shortage = unitsNeeded - toTransfuse
@@ -290,6 +305,44 @@ def simulateEvents(scenario: dict, policyName: str, seed: int):
                 for unit in available[:toTransfuse]:
                     unit["status"] = "transfused"
                     yield {"type": "transfusion", "unitId": unit["unitId"]}
+
+                # Out of stock locally: ring round the region for an urgent
+                # courier. The routine transfer path moves units on a forecast
+                # of where demand might be; this moves them against demand that
+                # has already walked through the door, which is the case
+                # sharing actually answers.
+                if shortage > 0 and policyName == "exchange":
+                    regionStock = [
+                        _contractUnit(u)
+                        for units in inventory.values()
+                        for u in units if u["status"] == "available"
+                    ]
+                    sources = _rankEmergencySources(
+                        {"hospitalId": hospitalId, "bloodGroup": bloodGroup,
+                         "unitsNeeded": shortage},
+                        regionStock, travelTimes, compatibility, issueIso,
+                    )
+                    for source in sources:
+                        if shortage == 0:
+                            break
+                        donor = next(
+                            (c for c in inventory.get(source["hospitalId"], [])
+                             if c["unitId"] == source["unitId"] and c["status"] == "available"),
+                            None,
+                        )
+                        if donor is None:
+                            continue
+                        yield {
+                            "type": "transfer",
+                            "unitId": donor["unitId"],
+                            "fromHospitalId": source["hospitalId"],
+                            "toHospitalId": hospitalId,
+                            "travelMinutes": source["travelMinutes"],
+                        }
+                        donor["hospitalId"] = hospitalId
+                        donor["status"] = "transfused"
+                        yield {"type": "transfusion", "unitId": donor["unitId"]}
+                        shortage -= 1
 
                 if shortage > 0:
                     yield {
