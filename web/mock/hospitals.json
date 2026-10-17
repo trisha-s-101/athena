@@ -1,0 +1,14 @@
+[
+  {
+    "hospitalId": "H01",
+    "name": "Manchester Royal Infirmary",
+    "lat": 53.4627,
+    "lng": -2.2265,
+    "sizeCategory": "large",
+    "hasHaematology": true,
+    "stockSummary": {
+      "available": 12,
+      "expiringIn24h": 3
+    }
+  }
+]

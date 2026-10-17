@@ -1,0 +1,10 @@
+[
+  {
+    "eventId": "E000001",
+    "type": "delivery",
+    "unitId": "U000123",
+    "hospitalId": "H03",
+    "at": "2026-01-05T08:00:00Z",
+    "detail": "Unit U000123 (A+) delivered to H03"
+  }
+]

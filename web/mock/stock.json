@@ -1,0 +1,10 @@
+[
+  {
+    "unitId": "U000123",
+    "bloodGroup": "A+",
+    "collectedAt": "2026-01-05T08:00:00Z",
+    "expiresAt": "2026-01-12T08:00:00Z",
+    "hospitalId": "H03",
+    "status": "available"
+  }
+]

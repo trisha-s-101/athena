@@ -1,0 +1,11 @@
+[
+  {
+    "unitId": "U000123",
+    "fromHospitalId": "H03",
+    "toHospitalId": "H01",
+    "travelMinutes": 25,
+    "hoursToExpiry": 30.5,
+    "score": 0.82,
+    "reason": "Expires in 30h at H03 (forecast use 0.2); H01 forecast use 2.4"
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-01-05T00:00:00Z",
+  "seed": 42,
+  "noSharing": {
+    "policy": "noSharing",
+    "days": 90,
+    "unitsDelivered": 21000,
+    "unitsTransfused": 20400,
+    "unitsWasted": 610,
+    "wasteRate": 0.029,
+    "shortageEvents": 4,
+    "transfers": 820,
+    "daily": [
+      {
+        "date": "2026-01-05",
+        "wasted": 7,
+        "shortages": 0,
+        "transfers": 9
+      }
+    ]
+  },
+  "exchange": {
+    "policy": "exchange",
+    "days": 90,
+    "unitsDelivered": 21000,
+    "unitsTransfused": 20400,
+    "unitsWasted": 610,
+    "wasteRate": 0.029,
+    "shortageEvents": 4,
+    "transfers": 820,
+    "daily": [
+      {
+        "date": "2026-01-05",
+        "wasted": 7,
+        "shortages": 0,
+        "transfers": 9
+      }
+    ]
+  }
+}
