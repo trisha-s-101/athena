@@ -36,12 +36,42 @@ def _loadJson(relPath: str, default):
     return default
 
 
+# Synthetic travel times for the 10 default hospitals (H01–H10).
+# Used only when shared/travelTimes.json is not yet committed.
+# Roughly modelled on Greater Manchester road distances (minutes by courier).
+_DEFAULT_TRAVEL_TIMES: list[dict] = [
+    {"fromHospitalId": f"H{i:02d}", "toHospitalId": f"H{j:02d}",
+     "minutes": 10 + abs(i - j) * 8 + (i + j) % 7 * 3}
+    for i in range(1, 11) for j in range(1, 11) if i != j
+]
+
+# Standard ABO/RhD compatibility (simplified from UK transfusion guidelines).
+# Keys are recipient groups; each list entry is a compatible donor with a preference penalty.
+# penalty=0 → identical group (preferred), higher → less preferred but compatible.
+_DEFAULT_COMPATIBILITY: dict = {
+    "O+":  [{"donor": "O+",  "penalty": 0}, {"donor": "O-",  "penalty": 1}],
+    "O-":  [{"donor": "O-",  "penalty": 0}],
+    "A+":  [{"donor": "A+",  "penalty": 0}, {"donor": "A-",  "penalty": 1},
+            {"donor": "O+",  "penalty": 2}, {"donor": "O-",  "penalty": 3}],
+    "A-":  [{"donor": "A-",  "penalty": 0}, {"donor": "O-",  "penalty": 1}],
+    "B+":  [{"donor": "B+",  "penalty": 0}, {"donor": "B-",  "penalty": 1},
+            {"donor": "O+",  "penalty": 2}, {"donor": "O-",  "penalty": 3}],
+    "B-":  [{"donor": "B-",  "penalty": 0}, {"donor": "O-",  "penalty": 1}],
+    "AB+": [{"donor": "AB+", "penalty": 0}, {"donor": "AB-", "penalty": 1},
+            {"donor": "A+",  "penalty": 2}, {"donor": "A-",  "penalty": 3},
+            {"donor": "B+",  "penalty": 2}, {"donor": "B-",  "penalty": 3},
+            {"donor": "O+",  "penalty": 4}, {"donor": "O-",  "penalty": 5}],
+    "AB-": [{"donor": "AB-", "penalty": 0}, {"donor": "A-",  "penalty": 1},
+            {"donor": "B-",  "penalty": 1}, {"donor": "O-",  "penalty": 2}],
+}
+
+
 def _loadTravelTimes() -> list[dict]:
-    return _loadJson("shared/travelTimes.json", [])
+    return _loadJson("shared/travelTimes.json", _DEFAULT_TRAVEL_TIMES)
 
 
 def _loadCompatibility() -> dict:
-    return _loadJson("shared/compatibility.json", {})
+    return _loadJson("shared/compatibility.json", _DEFAULT_COMPATIBILITY)
 
 
 # ---------------------------------------------------------------------------
@@ -202,8 +232,10 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
 
             # 4. Exchange only: run engine every 6h
             if policyName == "exchange":
+                # Strip sim-internal deliveredAt before handing to engine
                 availableStock = [
-                    u for units in inventory.values()
+                    {k: v for k, v in u.items() if k != "deliveredAt"}
+                    for units in inventory.values()
                     for u in units if u["status"] == "available"
                 ]
                 forecast = _forecastDemand(demandHistory, horizonDays=3)

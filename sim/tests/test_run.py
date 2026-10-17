@@ -1,7 +1,9 @@
-"""Tests for sim/run.py -- checks comparison.json output shape (+16h shape)."""
+"""Tests for sim/run.py -- checks comparison.json output shape."""
 
 import sys
 import pathlib
+import unittest
+
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 
 from sim.run import run
@@ -9,43 +11,49 @@ from sim.run import run
 _SMALL_SEEDS = [1, 2, 3]  # keep tests fast
 
 
-def test_top_level_keys():
-    result = run(seeds=_SMALL_SEEDS)
-    assert set(result.keys()) == {"generatedAt", "seeds", "statistics", "stressScenarios"}
-    assert result["seeds"] == _SMALL_SEEDS
-    assert isinstance(result["generatedAt"], str)
+class TestRunOutput(unittest.TestCase):
 
+    def setUp(self):
+        self.result = run(seeds=_SMALL_SEEDS)
 
-def test_statistics_shape():
-    result = run(seeds=_SMALL_SEEDS)
-    stat_keys = {"mean", "stdDev", "min", "max"}
-    for policy in ("noSharing", "exchange"):
-        ps = result["statistics"][policy]
-        assert set(ps["wasteRate"].keys()) == stat_keys
-        assert set(ps["shortageEvents"].keys()) == stat_keys
+    def test_top_level_keys(self):
+        expected = {"generatedAt", "seed", "noSharing", "exchange",
+                    "seeds", "statistics", "stressScenarios"}
+        self.assertEqual(set(self.result.keys()), expected)
+        self.assertEqual(self.result["seeds"], _SMALL_SEEDS)
+        self.assertIsInstance(self.result["generatedAt"], str)
 
-
-def test_stress_scenarios_shape():
-    result = run(seeds=_SMALL_SEEDS)
-    ss = result["stressScenarios"]
-    assert set(ss.keys()) == {"demandSurge", "supplyDip"}
-    for scenario in ss.values():
-        assert "description" in scenario
+    def test_canonical_sim_results(self):
+        """Old CONTRACT §7 keys: seed, noSharing, exchange must be present."""
+        self.assertEqual(self.result["seed"], 42)
+        simResultKeys = {"policy", "days", "unitsDelivered", "unitsTransfused",
+                         "unitsWasted", "wasteRate", "shortageEvents", "transfers", "daily"}
         for policy in ("noSharing", "exchange"):
-            sr = scenario[policy]
-            assert sr["unitsDelivered"] >= sr["unitsTransfused"] + sr["unitsWasted"]
+            self.assertEqual(set(self.result[policy].keys()), simResultKeys)
 
+    def test_statistics_shape(self):
+        statKeys = {"mean", "stdDev", "min", "max"}
+        for policy in ("noSharing", "exchange"):
+            ps = self.result["statistics"][policy]
+            self.assertEqual(set(ps["wasteRate"].keys()), statKeys)
+            self.assertEqual(set(ps["shortageEvents"].keys()), statKeys)
 
-def test_deterministic():
-    r1 = run(seeds=[7, 8])
-    r2 = run(seeds=[7, 8])
-    assert r1["statistics"]["noSharing"]["wasteRate"]["mean"] == \
-           r2["statistics"]["noSharing"]["wasteRate"]["mean"]
+    def test_stress_scenarios_shape(self):
+        ss = self.result["stressScenarios"]
+        self.assertEqual(set(ss.keys()), {"demandSurge", "supplyDip"})
+        for scenario in ss.values():
+            self.assertIn("description", scenario)
+            for policy in ("noSharing", "exchange"):
+                sr = scenario[policy]
+                self.assertGreaterEqual(sr["unitsDelivered"],
+                                        sr["unitsTransfused"] + sr["unitsWasted"])
+
+    def test_deterministic(self):
+        r2 = run(seeds=[1, 2])
+        r3 = run(seeds=[1, 2])
+        self.assertEqual(r2["statistics"]["noSharing"]["wasteRate"]["mean"],
+                         r3["statistics"]["noSharing"]["wasteRate"]["mean"])
 
 
 if __name__ == "__main__":
-    test_top_level_keys()
-    test_statistics_shape()
-    test_stress_scenarios_shape()
-    test_deterministic()
-    print("All tests passed.")
+    unittest.main()
