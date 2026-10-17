@@ -73,3 +73,5 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS events_type_at_idx ON events (type, at);
+-- The sim clock is the latest clock event by arrival order, so a restarted sim can rewind it.
+CREATE INDEX IF NOT EXISTS events_type_number_idx ON events (type, event_number);
