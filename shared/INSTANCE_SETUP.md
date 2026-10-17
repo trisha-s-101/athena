@@ -178,6 +178,9 @@ The app runs inside **tmux**, so it keeps running after you disconnect:
 - Leave it running: press `Ctrl+B`, then `D`
 - Come back to it: `tmux attach -t app`
 - Stop the app: inside the session, press `Ctrl+C`
+- Check you're inside tmux: there's a **green bar along the bottom** of the screen. No green bar means you're not in tmux, and the app will stop when you disconnect.
+
+**Mac keyboards:** `Ctrl` means the **control (⌃)** key, not Command. `Ctrl+B`, then `D` means: hold control and press `b`, **let go of both**, then press a **lowercase** `d` on its own. Shift+D opens a menu instead; if that happens, press `q` and try again. `Ctrl+C` is control + `c` (Command+C only copies text).
 
 Port 8000 isn't open, so the app only listens inside the instance, and everyone reaches it through the SSH tunnel from Part 6.
 
@@ -225,17 +228,24 @@ Start the app:
 ```bash
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
-**Expect:** a line containing `Uvicorn running on http://127.0.0.1:8000`. It keeps running and doesn't return to the prompt. That's correct.
+**Wait** until you see a line containing `Uvicorn running on http://127.0.0.1:8000`. It keeps running and doesn't return to the prompt. That's correct.
 
-Leave it running: press `Ctrl+B`, let go, then press `D`.
-**Expect:** you're back at your normal prompt, with `[detached (from session app)]`.
+Only then, leave it running: press `Ctrl+B`, let go, then press lowercase `d` (see the Mac note above).
+**Expect:** the green bar disappears and you see `[detached (from session app)]`. If you don't see that message, you weren't inside tmux: **stop and tell Neil.**
 
 Check the app answers:
 
 ```bash
-curl -s localhost:8000/api/health
+curl -sS localhost:8000/api/health
 ```
-**Expect:** `{"status":"ok","arch":"s390x","dbOk":true}`. If `dbOk` is `false`, see Troubleshooting.
+**Expect:** `{"status":"ok","arch":"s390x","dbOk":true}`. If `dbOk` is `false`, or `curl` prints an error or nothing at all, see Troubleshooting.
+
+Check the app will keep running after you disconnect:
+
+```bash
+tmux ls
+```
+**Expect:** a line starting with `app:`.
 
 ### 8B: Open the dashboard (on your laptop)
 
@@ -254,17 +264,26 @@ Connect to the instance, then go back into the running session:
 ```bash
 tmux attach -t app
 ```
+**Expect:** the green bar and the running app. If it says `no sessions` or `no server running`, the app isn't running anymore: do **8A** from the start instead.
+
 Press `Ctrl+C` to stop the app. **Expect:** your prompt comes back.
+
+Get the latest code on its own first, because it may ask for your token:
 
 ```bash
 git pull
+```
+
+Then run these:
+
+```bash
 python -m db.seed
 python -m unittest discover api/tests
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 **Expect:** the same results as in 8A. `python -m db.seed` is safe to run every time: it only adds what's missing and never deletes live data.
 
-Press `Ctrl+B`, then `D` to leave it running, and run the `curl` check from 8A. Post "Deployed" in the group chat.
+**Wait** for `Uvicorn running on http://127.0.0.1:8000`, then press `Ctrl+B`, let go, and press lowercase `d`. Run the `curl -sS` and `tmux ls` checks from 8A. Post "Deployed" in the group chat.
 
 ### 8D: Wiping the database (only when Neil asks)
 
@@ -291,6 +310,10 @@ python -m db.seed --reset
 | `No module named 'fastapi'` (or `uvicorn`, `psycopg2`) | The Python environment isn't loaded. Run `source ~/venv/bin/activate` and try again. |
 | `address already in use` when starting the app | The app is already running in another session. Run `tmux attach -t app` instead of starting a new one. |
 | `duplicate session: app` | A session already exists. Use `tmux attach -t app` instead of `tmux new -s app`. |
+| `curl` prints nothing, `Connection refused`, or `Failed to connect` | The app isn't running. Run `tmux attach -t app` and look at the screen: if it's a plain prompt, start the app again (the `python -m uvicorn ...` line) and wait for `Uvicorn running`. If there's an error, send Neil the text. |
+| `no sessions` or `no server running` from `tmux attach` | The tmux session is gone, so the app stopped. Do 8A from the start. |
+| `Ctrl+B`, `D` does nothing, or the app stops when you disconnect | You weren't inside tmux (no green bar at the bottom). Do 8A from the start, beginning with `tmux new -s app`. |
+| A list pops up after `Ctrl+B` | You pressed Shift+D. Press `q`, then `Ctrl+B` and lowercase `d`. |
 | Laptop tunnel says `bind: Address already in use` | Something on your laptop already uses port 8000. Use `-L 8001:localhost:8000` and open http://localhost:8001 instead. |
 | Browser says it can't connect to localhost:8000 | The tunnel terminal was closed or disconnected. Run the `ssh -L ...` command again. |
 | Anything else | Screenshot it and send it to Neil. |
