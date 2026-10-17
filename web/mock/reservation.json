@@ -1,8 +1,0 @@
-{
-  "reservationId": "R000001",
-  "unitId": "U000123",
-  "fromHospitalId": "H03",
-  "toHospitalId": "H01",
-  "status": "accepted",
-  "createdAt": "2026-01-05T14:00:00Z"
-}

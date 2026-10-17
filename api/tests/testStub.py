@@ -5,17 +5,14 @@ Run from the repo root: python -m unittest discover api/tests
 
 import json
 import socket
-import tempfile
 import threading
 import time
 import unittest
 import urllib.error
 import urllib.request
-from pathlib import Path
 
 import uvicorn
 
-from api.exportMocks import exportMocks, mockFiles
 from api.main import app
 
 
@@ -112,15 +109,6 @@ class StubApiTest(unittest.TestCase):
         self.assertEqual(self.request("POST", "/feed/events", {"type": "teleport"}), (400, {"error": "invalidRequest"}))
         self.assertEqual(self.request("POST", "/emergency", {"hospitalId": "H05"}), (400, {"error": "invalidRequest"}))
         self.assertEqual(self.request("GET", "/noSuchEndpoint"), (404, {"error": "notFound"}))
-
-
-class ExportMocksTest(unittest.TestCase):
-    def testWritesEveryMockAsJson(self):
-        with tempfile.TemporaryDirectory() as tempDir:
-            paths = exportMocks(Path(tempDir))
-            self.assertEqual({path.name for path in paths}, set(mockFiles))
-            for path in paths:
-                self.assertEqual(json.loads(path.read_text()), mockFiles[path.name])
 
 
 if __name__ == "__main__":

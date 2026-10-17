@@ -1,11 +1,29 @@
 [
   {
-    "unitId": "U000123",
-    "fromHospitalId": "H03",
-    "toHospitalId": "H01",
+    "unitId": "U000001",
+    "fromHospitalId": "H01",
+    "toHospitalId": "H02",
     "travelMinutes": 25,
-    "hoursToExpiry": 30.5,
+    "hoursToExpiry": 18.0,
     "score": 0.82,
-    "reason": "Expires in 30h at H03 (forecast use 0.2); H01 forecast use 2.4"
+    "reason": "Expires in 18h; illustrative forecast favors destination. Synthetic recommendation."
+  },
+  {
+    "unitId": "U000025",
+    "fromHospitalId": "H04",
+    "toHospitalId": "H07",
+    "travelMinutes": 45,
+    "hoursToExpiry": 20.0,
+    "score": 0.82,
+    "reason": "Expires in 20h; illustrative forecast favors destination. Synthetic recommendation."
+  },
+  {
+    "unitId": "U000057",
+    "fromHospitalId": "H08",
+    "toHospitalId": "H03",
+    "travelMinutes": 35,
+    "hoursToExpiry": 30.0,
+    "score": 0.82,
+    "reason": "Expires in 30h; illustrative forecast favors destination. Synthetic recommendation."
   }
 ]
