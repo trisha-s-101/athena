@@ -20,7 +20,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import engine
 from api import examples
-from api.database import DatabaseUnavailable, currentSimTime, isDatabaseOk, toIsoTime, transaction
+from api.database import (DatabaseUnavailable, currentSimTime, isDatabaseOk, logger, toIsoTime, transaction,
+                          warnIfDatabaseUrlMissing)
 from api.engineInputs import fetchAvailableStock, fetchDemandHistory, fetchTravelTimes, loadCompatibility
 from api.models import EmergencyRequest, FeedEvent, ReservationRequest
 
@@ -44,6 +45,7 @@ class ApiError(Exception):
 
 
 app = FastAPI(title="Platelet Exchange API")
+warnIfDatabaseUrlMissing()
 router = APIRouter(prefix="/api")
 
 
@@ -71,6 +73,7 @@ async def onBadValue(request: Request, exc: psycopg2.Error):
 @app.exception_handler(DatabaseUnavailable)
 @app.exception_handler(psycopg2.OperationalError)
 async def onDatabaseDown(request: Request, exc: Exception):
+    logger.warning("%s %s: database unavailable: %s", request.method, request.url.path, str(exc).strip())
     return errorResponse(503, "databaseUnavailable")
 
 

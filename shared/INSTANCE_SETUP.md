@@ -296,6 +296,67 @@ python -m db.seed --reset
 
 ---
 
+## Part 9: Running live mode (the sim feeding the dashboard)
+
+Live mode replays a simulated scenario into the app: units are delivered, used and expire, and the dashboard updates every 5 seconds. It runs in its **own** tmux session called `sim`, next to the app's session.
+
+The app must already be running (Part 8). Check:
+
+```bash
+curl -sS localhost:8000/api/health
+```
+**Expect:** `{"status":"ok","arch":"s390x","dbOk":true}`
+
+### 9A: Start a live run
+
+Start a second tmux session:
+
+```bash
+tmux new -s sim
+```
+**Expect:** the green bar at the bottom.
+
+```bash
+source ~/venv/bin/activate
+source ~/plateletExchange.env
+cd ~/plateletExchange
+```
+
+**Wipe the database first, every time.** A new run replays the same units from the start, and the app rejects units it has already seen. This is safe while the app is running:
+
+```bash
+python -m db.seed --reset
+```
+**Expect:** `Reset and seeded: 10 hospitals, 90 travel times`
+
+Start the stream:
+
+```bash
+python -m sim.live --api http://localhost:8000 --speed 1440
+```
+**Expect:** `[sim.live] API healthy: ...`, then `[sim.live] Streaming 90 days ...`, then a new line about every 15 seconds starting `[sim.live] 2026-01-05T...`. `--speed 1440` runs one sim day per real minute, so a full 90-day run takes about 90 minutes. Neil may ask for a different speed for the demo.
+
+Leave it running: press `Ctrl+B`, let go, then press lowercase `d`.
+**Expect:** `[detached (from session sim)]`.
+
+### 9B: Check it's working
+
+```bash
+curl -sS localhost:8000/api/metrics
+```
+**Expect:** `simTime` moving forward each time you run it, and `unitsAvailable` above 0.
+
+On the dashboard (Part 8B), hospitals fill with stock. **Recommended transfers** appear after about one sim day (about a minute at `--speed 1440`), once there's demand history to forecast from.
+
+### 9C: Stop a live run
+
+```bash
+tmux attach -t sim
+```
+Press `Ctrl+C`. **Expect:** your prompt comes back. The data stays in the database until the next wipe. To start again, go back to 9A's wipe step. When a run finishes on its own, it prints `[sim.live] Done. Events sent:` and a count of each event type.
+
+---
+
 ## Troubleshooting
 
 | What you see | What to do |
@@ -314,6 +375,9 @@ python -m db.seed --reset
 | `no sessions` or `no server running` from `tmux attach` | The tmux session is gone, so the app stopped. Do 8A from the start. |
 | `Ctrl+B`, `D` does nothing, or the app stops when you disconnect | You weren't inside tmux (no green bar at the bottom). Do 8A from the start, beginning with `tmux new -s app`. |
 | A list pops up after `Ctrl+B` | You pressed Shift+D. Press `q`, then `Ctrl+B` and lowercase `d`. |
+| `[sim.live] POST failed (HTTP Error 409: Conflict)` and `event(s) failed to post` | The database wasn't wiped before this run. Stop the run (9C), then do 9A again from the wipe step. |
+| `[sim.live] Cannot reach http://localhost:8000/api/health` | The app isn't running. Start it (Part 8), then start live mode again. |
+| `duplicate session: sim` | A live run session already exists. Use `tmux attach -t sim` to see it. |
 | Laptop tunnel says `bind: Address already in use` | Something on your laptop already uses port 8000. Use `-L 8001:localhost:8000` and open http://localhost:8001 instead. |
 | Browser says it can't connect to localhost:8000 | The tunnel terminal was closed or disconnected. Run the `ssh -L ...` command again. |
 | Anything else | Screenshot it and send it to Neil. |
