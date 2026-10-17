@@ -1,0 +1,10 @@
+{
+  "O+": [{"donor": "O+", "penalty": 0}, {"donor": "O-", "penalty": 1}, {"donor": "A+", "penalty": 2}, {"donor": "AB+", "penalty": 2}, {"donor": "B+", "penalty": 2}, {"donor": "A-", "penalty": 3}, {"donor": "AB-", "penalty": 3}, {"donor": "B-", "penalty": 3}],
+  "O-": [{"donor": "O-", "penalty": 0}, {"donor": "A-", "penalty": 2}, {"donor": "AB-", "penalty": 2}, {"donor": "B-", "penalty": 2}],
+  "A+": [{"donor": "A+", "penalty": 0}, {"donor": "A-", "penalty": 1}, {"donor": "AB+", "penalty": 2}, {"donor": "AB-", "penalty": 3}, {"donor": "B+", "penalty": 3}, {"donor": "O+", "penalty": 3}, {"donor": "B-", "penalty": 4}, {"donor": "O-", "penalty": 4}],
+  "A-": [{"donor": "A-", "penalty": 0}, {"donor": "AB-", "penalty": 2}, {"donor": "B-", "penalty": 3}, {"donor": "O-", "penalty": 3}],
+  "B+": [{"donor": "B+", "penalty": 0}, {"donor": "B-", "penalty": 1}, {"donor": "AB+", "penalty": 2}, {"donor": "A+", "penalty": 3}, {"donor": "AB-", "penalty": 3}, {"donor": "O+", "penalty": 3}, {"donor": "A-", "penalty": 4}, {"donor": "O-", "penalty": 4}],
+  "B-": [{"donor": "B-", "penalty": 0}, {"donor": "AB-", "penalty": 2}, {"donor": "A-", "penalty": 3}, {"donor": "O-", "penalty": 3}],
+  "AB+": [{"donor": "AB+", "penalty": 0}, {"donor": "AB-", "penalty": 1}, {"donor": "A+", "penalty": 3}, {"donor": "B+", "penalty": 3}, {"donor": "O+", "penalty": 3}, {"donor": "A-", "penalty": 4}, {"donor": "B-", "penalty": 4}, {"donor": "O-", "penalty": 4}],
+  "AB-": [{"donor": "AB-", "penalty": 0}, {"donor": "A-", "penalty": 3}, {"donor": "B-", "penalty": 3}, {"donor": "O-", "penalty": 3}]
+}

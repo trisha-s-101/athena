@@ -1,0 +1,31 @@
+{
+  "simDays": 90,
+  "baselineWasteRate": 0.048,
+  "dailyDemandMean": {
+    "small": 1,
+    "medium": 3,
+    "large": 8
+  },
+  "weekendDemandFactor": 0.6,
+  "bloodGroupMix": {
+    "O+": 0.35,
+    "A+": 0.3,
+    "B+": 0.08,
+    "AB+": 0.02,
+    "O-": 0.13,
+    "A-": 0.08,
+    "B-": 0.02,
+    "AB-": 0.01
+  },
+  "remainingShelfLifeOnArrivalDays": {
+    "min": 1,
+    "max": 4
+  },
+  "targetStockDays": {
+    "small": 2,
+    "medium": 2,
+    "large": 1.5
+  },
+  "maxTransferMinutes": 240,
+  "minHoursLeftToTransfer": 12
+}
