@@ -157,6 +157,32 @@ class DatabaseApiTest(ServerTestCase):
         self.assertEqual(self.request("POST", "/reservations/R000001/complete"),
                          (409, {"error": "unitNotAvailable"}))
 
+    def testMetricsBeforeAnyEvents(self):
+        self.assertEqual(self.request("GET", "/metrics"), (200, {
+            "simTime": "2026-01-05T00:00:00Z", "unitsAvailable": 0, "expiringIn24h": 0, "wastedToday": 0,
+            "shortagesToday": 0, "transfersToday": 0, "wasteRate": 0.0,
+        }))
+
+    def testMetricsCountTheSimDay(self):
+        self.feed({"type": "clock", "simTime": "2026-01-05T20:00:00Z"})
+        for index in range(1, 5):
+            self.deliver(makeUnit(f"U00000{index}", expiresAt="2026-01-06T08:00:00Z" if index == 1 else
+                                  "2026-01-12T08:00:00Z"))
+        self.feed({"type": "expiry", "unitId": "U000004"})
+        self.reserve("U000003")
+        self.request("POST", "/reservations/R000001/complete")
+        self.feed({"type": "demandUnmet", "hospitalId": "H02", "bloodGroup": "O-", "units": 1})
+        self.assertEqual(self.request("GET", "/metrics")[1], {
+            "simTime": "2026-01-05T20:00:00Z", "unitsAvailable": 3, "expiringIn24h": 1, "wastedToday": 1,
+            "shortagesToday": 1, "transfersToday": 1, "wasteRate": 0.25,
+        })
+        # The next sim day starts the daily counts again; totals and stock carry over.
+        self.feed({"type": "clock", "simTime": "2026-01-06T01:00:00Z"})
+        self.assertEqual(self.request("GET", "/metrics")[1], {
+            "simTime": "2026-01-06T01:00:00Z", "unitsAvailable": 3, "expiringIn24h": 1, "wastedToday": 0,
+            "shortagesToday": 0, "transfersToday": 0, "wasteRate": 0.25,
+        })
+
     def testConcurrentReservationsOverHttpGiveExactlyOne201(self):
         self.deliver(makeUnit("U000001"))
         with ThreadPoolExecutor(max_workers=50) as executor:

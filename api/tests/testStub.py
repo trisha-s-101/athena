@@ -31,7 +31,7 @@ class StubApiTest(ServerTestCase):
         self.assertIs(body["dbOk"], False)
 
     def testDatabaseEndpointsReturn503WithoutDatabase(self):
-        for method, path, body in [("GET", "/hospitals", None), ("GET", "/stock", None),
+        for method, path, body in [("GET", "/hospitals", None), ("GET", "/stock", None), ("GET", "/metrics", None),
                                    ("POST", "/reservations", {"unitId": "U000123", "toHospitalId": "H01"}),
                                    ("POST", "/feed/events", {"type": "clock", "simTime": "2026-01-05T14:00:00Z"})]:
             with self.subTest(path=path):
@@ -43,7 +43,7 @@ class StubApiTest(ServerTestCase):
         self.assertEqual(body[0]["rank"], 1)
 
     def testGetEndpoints(self):
-        for path in ["/recommendations", "/metrics", "/events?limit=5", "/simulation/results"]:
+        for path in ["/recommendations", "/events?limit=5", "/simulation/results"]:
             with self.subTest(path=path):
                 self.assertEqual(self.request("GET", path)[0], 200)
 
