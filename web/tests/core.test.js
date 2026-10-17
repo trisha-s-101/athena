@@ -58,9 +58,9 @@ test('UTC expiry boundaries and escaping API text',()=>{
   assert.equal(escapeHtml('<img onerror="bad">'), '&lt;img onerror=&quot;bad&quot;&gt;');
 });
 
-test('fixtures respect seven-day shelf life and comparison totals',async()=>{
+test('fixtures respect five-day shelf life and comparison totals',async()=>{
   const data=await fixtures();
-  data.stock.forEach(unit=>assert.equal(Date.parse(unit.expiresAt)-Date.parse(unit.collectedAt),7*86400000));
+  data.stock.forEach(unit=>assert.equal(Date.parse(unit.expiresAt)-Date.parse(unit.collectedAt),5*86400000));
   for(const policy of ['noSharing','exchange']) {
     const result=data.comparison[policy];
     assert.equal(result.daily.length,result.days);

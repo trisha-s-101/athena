@@ -452,3 +452,7 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+.connection {
+  display: none;
+}
