@@ -4,6 +4,7 @@ The pool is created on first use from DATABASE_URL, so the app still starts (and
 still answers) when the database is down or the variable is missing.
 """
 
+import logging
 import os
 import threading
 from contextlib import contextmanager
@@ -11,6 +12,9 @@ from datetime import datetime, timezone
 
 import psycopg2
 import psycopg2.pool
+
+# uvicorn's own logger, so messages appear in the app's tmux window next to its startup lines.
+logger = logging.getLogger("uvicorn.error")
 
 poolSize = 20
 simStartTime = "2026-01-05T00:00:00Z"  # Contract section 3; used until the first clock event arrives.
@@ -67,12 +71,20 @@ def transaction():
             pool.putconn(connection, close=broken or connection.closed != 0)
 
 
+def warnIfDatabaseUrlMissing() -> None:
+    if not os.environ.get("DATABASE_URL"):
+        logger.warning("DATABASE_URL is not set, so every database endpoint will return 503. "
+                       "Stop the app, run: source ~/plateletExchange.env, then start it again.")
+
+
 def isDatabaseOk() -> bool:
+    """Logs the reason when the check fails, so a dbOk of false always comes with an explanation."""
     try:
         with transaction() as cursor:
             cursor.execute("SELECT 1")
             return cursor.fetchone() == (1,)
-    except (DatabaseUnavailable, psycopg2.Error):
+    except (DatabaseUnavailable, psycopg2.Error) as error:
+        logger.warning("Health check: database unavailable: %s", str(error).strip())
         return False
 
 

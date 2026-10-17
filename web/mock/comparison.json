@@ -1104,5 +1104,54 @@
         "transfers": 5
       }
     ]
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "statistics": {
+    "noSharing": {
+      "wasteRate": {
+        "mean": 0.041,
+        "stdDev": 0.004,
+        "min": 0.035,
+        "max": 0.047
+      },
+      "shortageEvents": {
+        "mean": 12.6,
+        "stdDev": 3.1,
+        "min": 8.0,
+        "max": 18.0
+      },
+      "transfers": 0
+    },
+    "exchange": {
+      "wasteRate": {
+        "mean": 0.016,
+        "stdDev": 0.003,
+        "min": 0.012,
+        "max": 0.021
+      },
+      "shortageEvents": {
+        "mean": 5.4,
+        "stdDev": 2.0,
+        "min": 2.0,
+        "max": 9.0
+      },
+      "transfers": {
+        "mean": 489.2,
+        "stdDev": 21.5,
+        "min": 455.0,
+        "max": 521.0
+      }
+    }
   }
 }

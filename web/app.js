@@ -1,4 +1,4 @@
-import {createClient, escapeHtml as e, hoursLeft, expiryColor} from './core.js';
+import {createClient, escapeHtml as e, hoursLeft, expiryColor, seedSummary} from './core.js';
 
 const $ = id => document.getElementById(id);
 const state = {hospitals:[], stock:[], recommendations:[], reservations:[], selectedHospital:null, metrics:null};
@@ -13,7 +13,7 @@ function table(headers, rows) { return `<table><thead><tr>${headers.map(item => 
 function message(text) { $('notice').textContent = text; }
 
 async function loadMock() {
-  const names = ['hospitals','stock','recommendations','metrics','events','comparison','emergencySources','travelTimes'];
+  const names = ['hospitals','stock','recommendations','metrics','events','comparison','emergencySources','travelTimes','benchmark'];
   const entries = await Promise.all(names.map(async name => {
     const response = await fetch(`mock/${name}.json`);
     if (!response.ok) throw new Error(`Cannot load mock/${name}.json`);
@@ -110,16 +110,50 @@ function chart(title, metric, baseline, exchange) {
   }).join('')}<text x="42" y="180">${e(dates[0])}</text><text x="472" y="180" text-anchor="end">${e(dates.at(-1))}</text><text x="42" y="206">● No sharing</text><text x="180" y="206" style="fill:#087b72">● Exchange</text></svg></div>`;
 }
 
+// One small chart per metric: bar = mean across seeds, whisker = ±1 standard deviation (clipped at 0).
+function errorBars(summary) {
+  const format = (value, unit) => unit === '%' ? `${value.toFixed(2)}%` : value.toFixed(1);
+  return `<div class="errorBarGrid">${summary.metrics.map(metric => {
+    const rows = [['No sharing',metric.noSharing,'#798c92'],['Exchange',metric.exchange,'#087b72']];
+    const maximum = Math.max(1e-9,...rows.map(([,stats]) => stats.mean + stats.stdDev));
+    const x = value => 92 + Math.max(0,value)/maximum*150;
+    return `<div><h3>${e(metric.label)}</h3><svg class="chart" viewBox="0 0 330 96" role="img" aria-label="${e(metric.label)}: mean and one standard deviation across ${e(summary.seedCount)} seeds">${rows.map(([label,stats,color],index) => {
+      const y = 22 + index*40, low = x(stats.mean - stats.stdDev), high = x(stats.mean + stats.stdDev);
+      return `<text x="0" y="${y+5}">${e(label)}</text><rect x="92" y="${y-9}" width="${x(stats.mean)-92}" height="18" rx="3" fill="${color}" opacity="0.85"/><path d="M${low} ${y} H${high} M${low} ${y-7} V${y+7} M${high} ${y-7} V${y+7}" stroke="#132b35" stroke-width="1.5"/><text x="${high+6}" y="${y+5}">${e(format(stats.mean,metric.unit))} ± ${e(format(stats.stdDev,metric.unit))}</text><title>${e(label)}: mean ${e(format(stats.mean,metric.unit))}, range ${e(format(stats.min,metric.unit))}–${e(format(stats.max,metric.unit))}</title>`;
+    }).join('')}</svg></div>`;
+  }).join('')}</div>`;
+}
+
 async function loadComparison(currentGeneration = generation) {
   $('comparison').innerHTML = empty('Loading simulation results…');
   try {
     const result = await client('/simulation/results');
     if (currentGeneration !== generation) return;
     const baseline = result.noSharing, exchange = result.exchange;
-    $('comparison').innerHTML = `<p class="muted">Seed ${e(result.seed)} · ${e(baseline.days)} days · Generated ${e(formatTime(result.generatedAt))}</p>` + table(['Metric','No sharing','Exchange'],[
+    const summary = seedSummary(result);
+    const acrossSeeds = summary
+      ? `<h3>Across ${e(summary.seedCount)} seeds</h3><p class="muted">Bar: mean. Whisker: ±1 standard deviation. Hover for the range.</p>${errorBars(summary)}<h3>Canonical run (seed ${e(result.seed)})</h3>`
+      : '<p class="muted">Single-seed results only. Error bars appear once python -m sim.run writes multi-seed statistics.</p>';
+    $('comparison').innerHTML = `<p class="muted">${e(baseline.days)} days · Generated ${e(formatTime(result.generatedAt))}</p>` + acrossSeeds + table(['Metric','No sharing','Exchange'],[
       ['Units delivered',baseline.unitsDelivered,exchange.unitsDelivered],['Units transfused',baseline.unitsTransfused,exchange.unitsTransfused],['Units wasted',baseline.unitsWasted,exchange.unitsWasted],['Waste rate',`${(baseline.wasteRate*100).toFixed(2)}%`,`${(exchange.wasteRate*100).toFixed(2)}%`],['Shortage events',baseline.shortageEvents,exchange.shortageEvents],['Transfers',baseline.transfers,exchange.transfers]
     ].map(row => `<tr>${row.map(cell => `<td>${e(cell)}</td>`).join('')}</tr>`)) + `<div class="chartGrid">${chart('Daily waste','wasted',baseline,exchange)}${chart('Daily shortages','shortages',baseline,exchange)}</div>`;
   } catch (error) { if (currentGeneration === generation) $('comparison').innerHTML = empty(`Simulation results unavailable: ${error.message}`); }
+}
+
+async function loadBenchmark(currentGeneration = generation) {
+  $('benchmark').innerHTML = empty('Loading benchmark results…');
+  try {
+    const result = await client('/benchmark/results');
+    if (currentGeneration !== generation) return;
+    const onMainframe = result.arch === 's390x';
+    const race = result.reserveRace, latency = result.latency;
+    const raceHtml = race ? `<p class="benchmarkHeadline"><strong>${e(number(race.attempts))}</strong> simultaneous reservations for one unit → <strong>${e(race.accepted)}</strong> accepted, ${e(number(race.conflicts))} rejected <span class="${race.passed ? 'pass' : 'fail'}">${race.passed ? '● No double booking' : '● Failed'}</span></p><p class="muted">Whole race ${e(race.durationSeconds)} s · p50 ${e(race.p50Ms)} ms · p99 ${e(race.p99Ms)} ms${race.otherErrors ? ` · ${e(race.otherErrors)} other errors` : ''}</p>` : empty('Reservation race not run yet.');
+    const latencyHtml = latency ? `<h3>Throughput and latency (${e(latency.concurrency)} requests in flight)</h3>` + table(['Endpoint','Requests/s','p50','p99','Errors'], latency.endpoints.map(endpoint => `<tr><td>${e(endpoint.name)}</td><td>${e(number(endpoint.throughputPerSecond))}</td><td>${e(endpoint.p50Ms)} ms</td><td>${e(endpoint.p99Ms)} ms</td><td>${e(endpoint.errors)}</td></tr>`)) : empty('Latency benchmark not run yet.');
+    $('benchmark').innerHTML = `<p class="${onMainframe ? 'pass' : 'muted'}">${onMainframe ? '● Measured on IBM Z (s390x)' : `Measured on ${e(result.arch)}, not the mainframe`} · ${e(formatTime(result.generatedAt))}</p>` + raceHtml + latencyHtml;
+  } catch (error) {
+    if (currentGeneration !== generation) return;
+    $('benchmark').innerHTML = error.status === 404 ? empty('Benchmarks have not been run on the instance yet (INSTANCE_SETUP Part 10).') : empty(`Benchmark results unavailable: ${error.message}`);
+  }
 }
 
 async function switchMode() {
@@ -132,6 +166,7 @@ async function switchMode() {
   client = createClient({useMock:$('mockToggle').checked,mockData});
   $('connectionStatus').textContent = 'Connecting…';
   void loadComparison(generation);
+  void loadBenchmark(generation);
   await poll(generation);
 }
 
@@ -173,6 +208,7 @@ $('emergencyForm').addEventListener('submit',async event => {
   finally {button.disabled=false;}
 });
 $('reloadComparison').addEventListener('click',()=>loadComparison());
+$('reloadBenchmark').addEventListener('click',()=>loadBenchmark());
 $('mockToggle').addEventListener('change',switchMode);
 
 try {mockData=await loadMock(); await switchMode();}

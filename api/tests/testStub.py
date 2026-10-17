@@ -3,9 +3,13 @@
 Run from the repo root: python -m unittest discover api/tests
 """
 
+import json
 import os
+import tempfile
 import unittest
+from pathlib import Path
 
+from api import main
 from api.database import closePool
 from api.tests.server import ServerTestCase
 
@@ -43,6 +47,17 @@ class StubApiTest(ServerTestCase):
         status, body = self.request("GET", "/simulation/results")
         self.assertEqual(status, 200)
         self.assertIn("generatedAt", body)
+
+    def testBenchmarkResultsServeTheFileOr404(self):
+        savedPath = main.benchmarkPath
+        with tempfile.TemporaryDirectory() as tempDir:
+            main.benchmarkPath = Path(tempDir) / "benchmark.json"
+            try:
+                self.assertEqual(self.request("GET", "/benchmark/results"), (404, {"error": "benchmarkNotFound"}))
+                main.benchmarkPath.write_text(json.dumps({"arch": "s390x"}))
+                self.assertEqual(self.request("GET", "/benchmark/results"), (200, {"arch": "s390x"}))
+            finally:
+                main.benchmarkPath = savedPath
 
     def testBadRequestsUseErrorShape(self):
         self.assertEqual(self.request("POST", "/feed/events", {"type": "teleport"}), (400, {"error": "invalidRequest"}))

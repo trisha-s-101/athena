@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {createClient,expiryColor,hoursLeft,escapeHtml} from '../core.js';
+import {createClient,expiryColor,hoursLeft,escapeHtml,seedSummary} from '../core.js';
 
 async function fixtures() {
   const names=['hospitals','stock','recommendations','metrics','events','comparison','emergencySources','travelTimes'];
@@ -68,4 +68,23 @@ test('fixtures respect seven-day shelf life and comparison totals',async()=>{
     assert.equal(result.daily.reduce((sum,day)=>sum+day.shortages,0),result.shortageEvents);
     assert.equal(result.daily.reduce((sum,day)=>sum+day.transfers,0),result.transfers);
   }
+});
+
+test('multi-seed statistics become error-bar rows; single-seed results give none',async()=>{
+  const data=await fixtures();
+  const summary=seedSummary(data.comparison);
+  assert.equal(summary.seedCount,10);
+  assert.deepEqual(summary.metrics.map(metric=>metric.label),['Waste rate','Shortage events','Transfers']);
+  const waste=summary.metrics[0];
+  assert.equal(waste.unit,'%'); assert.ok(Math.abs(waste.exchange.mean-1.6)<1e-9);
+  assert.deepEqual(summary.metrics[2].noSharing,{mean:0,stdDev:0,min:0,max:0});
+  assert.equal(seedSummary({seed:42,noSharing:{},exchange:{}}),null);
+});
+
+test('mock benchmark route returns the results, or 404 before any run',async()=>{
+  const benchmark=JSON.parse(await readFile(new URL('../mock/benchmark.json',import.meta.url),'utf8'));
+  const withResults=createClient({useMock:true,mockData:{...await fixtures(),benchmark}});
+  assert.equal((await withResults('/benchmark/results')).reserveRace.accepted,1);
+  const withoutResults=createClient({useMock:true,mockData:await fixtures()});
+  await assert.rejects(withoutResults('/benchmark/results'),error=>error.status===404&&error.message==='benchmarkNotFound');
 });
