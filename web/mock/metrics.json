@@ -1,0 +1,9 @@
+{
+  "simTime": "2026-01-05T12:00:00Z",
+  "unitsAvailable": 80,
+  "expiringIn24h": 4,
+  "wastedToday": 2,
+  "shortagesToday": 0,
+  "transfersToday": 6,
+  "wasteRate": 0.031
+}

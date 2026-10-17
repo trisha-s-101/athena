@@ -1,0 +1,8 @@
+[
+  {"fromHospitalId": "H01", "toHospitalId": "H02", "minutes": 25},
+  {"fromHospitalId": "H02", "toHospitalId": "H01", "minutes": 27},
+  {"fromHospitalId": "H01", "toHospitalId": "H03", "minutes": 40},
+  {"fromHospitalId": "H03", "toHospitalId": "H01", "minutes": 42},
+  {"fromHospitalId": "H02", "toHospitalId": "H03", "minutes": 30},
+  {"fromHospitalId": "H03", "toHospitalId": "H02", "minutes": 31}
+]

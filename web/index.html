@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Platelet Exchange · Greater Manchester</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header><div><span class="eyebrow">GREATER MANCHESTER</span><h1>Platelet Exchange<span class="dot">●</span></h1><p>Move stock where it can make a difference.</p></div><div class="connection"><label><input type="checkbox" id="mockToggle" checked> Use mock data</label><span id="connectionStatus" role="status">Loading…</span><small id="simClock"></small></div></header>
+  <main>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <section class="metrics" id="metrics" aria-label="Exchange metrics"></section>
+    <div class="grid">
+      <section class="card network"><div class="sectionHead"><div><span class="eyebrow">THE NETWORK</span><h2>Hospital stock</h2></div><span class="badge">10 hospitals · synthetic demo</span></div><div class="legend"><span class="red">● Under 24h</span><span class="amber">● 24–72h</span><span class="green">● 72h+</span><span>Earliest available expiry</span></div><div id="map" aria-label="Hospital map"></div><div id="hospitalList" class="hospitalList"></div></section>
+      <section class="card"><div class="sectionHead"><div><span class="eyebrow">STOCK DETAIL</span><h2 id="hospitalTitle">Select a hospital</h2></div></div><div id="hospitalDetail" class="scroll"><p class="muted">Choose a hospital on the map or in the list.</p></div></section>
+    </div>
+    <section class="card"><div class="sectionHead"><div><span class="eyebrow">ACT BEFORE EXPIRY</span><h2>Recommended transfers</h2></div><span class="muted">Reserve → courier handoff → complete</span></div><div id="recommendations" class="scroll"></div><h3>Reservations this session</h3><div id="reservations"></div></section>
+    <div class="grid">
+      <section class="card"><span class="eyebrow">FIND COMPATIBLE STOCK</span><h2>Emergency request</h2><form id="emergencyForm"><label>Receiving hospital<select id="requestHospital" required></select></label><label>Blood group<select id="requestGroup"><option>O-</option><option>O+</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option></select></label><label>Units needed<input id="requestUnits" type="number" min="1" step="1" value="2" required></label><button type="submit">Find sources</button></form><p class="muted">Sources are ranked by the engine. A result does not reserve a unit.</p><div id="emergencyResults" class="scroll" aria-live="polite"></div></section>
+      <section class="card"><div class="sectionHead"><div><span class="eyebrow">LATEST ACTIVITY</span><h2>Events</h2></div><span class="badge">Refreshes every 5s</span></div><ol id="events" class="events"></ol></section>
+    </div>
+    <section class="card"><div class="sectionHead"><div><span class="eyebrow">MEASURE THE EFFECT</span><h2>Simulation comparison</h2></div><button id="reloadComparison" class="secondary">Refresh results</button></div><div id="comparison"></div><p class="muted">Error bars require results across multiple seeds; contract v1.1 supplies one seed only.</p></section>
+    <section class="card"><span class="eyebrow">MAINFRAME VALIDATION</span><h2>Reservation benchmark</h2><p class="muted">Awaiting an HTTP endpoint and response schema from Neil for results/benchmark.json. No benchmark values are assumed.</p></section>
+  </main>
+  <footer>Hackathon prototype · Synthetic mock data · All times UTC · Transfer recommendations require operational review</footer>
+</body>
+</html>

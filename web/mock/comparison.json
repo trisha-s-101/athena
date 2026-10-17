@@ -1,0 +1,1108 @@
+{
+  "generatedAt": "2026-01-05T12:00:00Z",
+  "seed": 42,
+  "noSharing": {
+    "policy": "noSharing",
+    "days": 90,
+    "unitsDelivered": 9000,
+    "unitsTransfused": 8640,
+    "unitsWasted": 360,
+    "wasteRate": 0.04,
+    "shortageEvents": 13,
+    "transfers": 0,
+    "daily": [
+      {
+        "date": "2026-01-05",
+        "wasted": 3,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-06",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-07",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-08",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-09",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-10",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-11",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-12",
+        "wasted": 4,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-13",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-14",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-15",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-16",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-17",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-18",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-19",
+        "wasted": 5,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-20",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-21",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-22",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-23",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-24",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-25",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-26",
+        "wasted": 3,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-27",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-28",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-29",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-30",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-01-31",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-01",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-02",
+        "wasted": 4,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-03",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-04",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-05",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-06",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-07",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-08",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-09",
+        "wasted": 5,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-10",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-11",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-12",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-13",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-14",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-15",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-16",
+        "wasted": 3,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-17",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-18",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-19",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-20",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-21",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-22",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-23",
+        "wasted": 4,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-24",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-25",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-26",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-27",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-02-28",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-01",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-02",
+        "wasted": 5,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-03",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-04",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-05",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-06",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-07",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-08",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-09",
+        "wasted": 3,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-10",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-11",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-12",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-13",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-14",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-15",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-16",
+        "wasted": 4,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-17",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-18",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-19",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-20",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-21",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-22",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-23",
+        "wasted": 5,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-24",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-25",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-26",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-27",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-28",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-29",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-30",
+        "wasted": 3,
+        "shortages": 1,
+        "transfers": 0
+      },
+      {
+        "date": "2026-03-31",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-04-01",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-04-02",
+        "wasted": 3,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-04-03",
+        "wasted": 4,
+        "shortages": 0,
+        "transfers": 0
+      },
+      {
+        "date": "2026-04-04",
+        "wasted": 5,
+        "shortages": 0,
+        "transfers": 0
+      }
+    ]
+  },
+  "exchange": {
+    "policy": "exchange",
+    "days": 90,
+    "unitsDelivered": 9000,
+    "unitsTransfused": 8865,
+    "unitsWasted": 135,
+    "wasteRate": 0.015,
+    "shortageEvents": 5,
+    "transfers": 493,
+    "daily": [
+      {
+        "date": "2026-01-05",
+        "wasted": 1,
+        "shortages": 1,
+        "transfers": 4
+      },
+      {
+        "date": "2026-01-06",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-01-07",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-01-08",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-01-09",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-01-10",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-01-11",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-01-12",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-01-13",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-01-14",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-01-15",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-01-16",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-01-17",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-01-18",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-01-19",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-01-20",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-01-21",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-01-22",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-01-23",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-01-24",
+        "wasted": 2,
+        "shortages": 1,
+        "transfers": 7
+      },
+      {
+        "date": "2026-01-25",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-01-26",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-01-27",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-01-28",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-01-29",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-01-30",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-01-31",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-02-01",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-02-02",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-02-03",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-02-04",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-02-05",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-02-06",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-02-07",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-02-08",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-02-09",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-02-10",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-02-11",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-02-12",
+        "wasted": 1,
+        "shortages": 1,
+        "transfers": 6
+      },
+      {
+        "date": "2026-02-13",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-02-14",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-02-15",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-02-16",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-02-17",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-02-18",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-02-19",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-02-20",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-02-21",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-02-22",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-02-23",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-02-24",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-02-25",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-02-26",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-02-27",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-02-28",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-01",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-02",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-03",
+        "wasted": 2,
+        "shortages": 1,
+        "transfers": 5
+      },
+      {
+        "date": "2026-03-04",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-05",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-06",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-07",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-03-08",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-09",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-10",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-11",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-03-12",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-13",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-14",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-15",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-03-16",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-17",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-18",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-19",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-03-20",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-21",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-22",
+        "wasted": 1,
+        "shortages": 1,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-23",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-03-24",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-25",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-26",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-27",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-03-28",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-03-29",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-03-30",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-03-31",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      },
+      {
+        "date": "2026-04-01",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 6
+      },
+      {
+        "date": "2026-04-02",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 7
+      },
+      {
+        "date": "2026-04-03",
+        "wasted": 1,
+        "shortages": 0,
+        "transfers": 4
+      },
+      {
+        "date": "2026-04-04",
+        "wasted": 2,
+        "shortages": 0,
+        "transfers": 5
+      }
+    ]
+  }
+}
