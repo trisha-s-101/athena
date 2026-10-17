@@ -29,11 +29,12 @@ The emergency form uses `POST /api/emergency` and displays the engine's ranking 
 - Daily waste and shortage charts compare the supplied single seed. Missing days break chart lines. Example fixture totals match their daily data; they are not measured outcomes.
 - Events are displayed in the newest-first order supplied by the API. The dashboard polls hospitals, stock, recommendations, metrics, and events every five seconds. Simulation results refresh separately.
 
-## Contract gaps for Neil
+## Comparison and benchmark panels (contract v1.2)
 
-1. The brief requests a benchmark panel from `results/benchmark.json`, but section 8 specifies neither an HTTP endpoint nor a schema for that file. The panel explains this dependency. No direct filesystem access or endpoint is assumed.
-2. The definition of done requires error bars across seeds; `/simulation/results` returns a single `seed` with two `SimResult` objects. A versioned multi-seed contract is needed before error bars can be implemented.
-3. Cross-reload reservation recovery requires a list-reservations interface if needed for the demo.
+- The comparison view shows error bars (mean ± 1 standard deviation, with the range on hover) from the multi-seed `statistics` in `/api/simulation/results`, above the canonical seed-42 table and daily charts. Single-seed results show a note instead.
+- The benchmark panel reads `GET /api/benchmark/results` and says which machine produced the numbers. Before the benchmarks run, the API returns 404 `benchmarkNotFound` and the panel says so.
+- `mock/benchmark.json` holds a real benchmark run from a development laptop (arm64), labeled as such in the panel. `mock/comparison.json`'s multi-seed `statistics` block is synthetic, like the rest of the mock.
+- Still open: reservation cards last only for the page session, because the contract has no list-reservations endpoint.
 
 ## Tests
 

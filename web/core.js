@@ -10,6 +10,20 @@ export function expiryColor(hours) {
   return hours < 24 ? 'red' : hours < 72 ? 'amber' : 'green';
 }
 
+// Multi-seed results (contract v1.2 section 7) as chart rows, or null for single-seed results.
+// noSharing.transfers is a plain 0 rather than a stats object; waste rate is scaled to percent.
+export function seedSummary(result) {
+  const statistics = result?.statistics;
+  if (!statistics?.noSharing || !statistics?.exchange) return null;
+  const asStats = (value, scale) => typeof value === 'number'
+    ? {mean:value*scale, stdDev:0, min:value*scale, max:value*scale}
+    : {mean:value.mean*scale, stdDev:value.stdDev*scale, min:value.min*scale, max:value.max*scale};
+  const metrics = [['Waste rate','wasteRate',100,'%'],['Shortage events','shortageEvents',1,''],['Transfers','transfers',1,'']];
+  return {seedCount:result.seeds?.length ?? 0, metrics:metrics.map(([label,key,scale,unit]) => ({
+    label, unit, noSharing:asStats(statistics.noSharing[key] ?? 0,scale), exchange:asStats(statistics.exchange[key] ?? 0,scale),
+  }))};
+}
+
 export class ApiError extends Error {
   constructor(status, code) { super(code); this.status = status; }
 }
@@ -47,6 +61,10 @@ export function createClient({useMock, mockData, fetchFn = fetch}) {
     else if (route === '/events') result = data.events.slice(0,Number(new URLSearchParams(query).get('limit') || 50));
     else if (route === '/recommendations') result = data.recommendations.filter(item => data.stock.some(unit => unit.unitId === item.unitId && unit.status === 'available' && unit.hospitalId === item.fromHospitalId));
     else if (route === '/simulation/results') result = data.comparison;
+    else if (route === '/benchmark/results') {
+      if (!data.benchmark) throw new ApiError(404,'benchmarkNotFound');
+      result = data.benchmark;
+    }
     else if (route === '/reservations' && body) {
       const unit = data.stock.find(unit => unit.unitId === body.unitId);
       if (!unit || unit.status !== 'available') throw new ApiError(409,'unitNotAvailable');

@@ -1,0 +1,86 @@
+{
+  "generatedAt": "2026-10-17T17:53:56Z",
+  "arch": "arm64",
+  "reserveRace": {
+    "generatedAt": "2026-10-17T17:53:43Z",
+    "attempts": 1000,
+    "accepted": 1,
+    "conflicts": 999,
+    "otherErrors": 0,
+    "passed": true,
+    "durationSeconds": 2.725,
+    "p50Ms": 1764.6,
+    "p99Ms": 2702.4
+  },
+  "latency": {
+    "generatedAt": "2026-10-17T17:53:56Z",
+    "concurrency": 20,
+    "requestsPerEndpoint": 500,
+    "endpoints": [
+      {
+        "name": "POST /api/feed/events (delivery)",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 427.5,
+        "p50Ms": 45.2,
+        "p99Ms": 87.8
+      },
+      {
+        "name": "POST /api/reservations",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 374.8,
+        "p50Ms": 51.9,
+        "p99Ms": 82.5
+      },
+      {
+        "name": "GET /api/hospitals",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 364.6,
+        "p50Ms": 55.8,
+        "p99Ms": 75.3
+      },
+      {
+        "name": "GET /api/stock",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 134.9,
+        "p50Ms": 150.5,
+        "p99Ms": 176.2
+      },
+      {
+        "name": "GET /api/metrics",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 399.7,
+        "p50Ms": 49.4,
+        "p99Ms": 74.5
+      },
+      {
+        "name": "GET /api/events",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 336.7,
+        "p50Ms": 58.1,
+        "p99Ms": 87.0
+      },
+      {
+        "name": "GET /api/recommendations",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 367.7,
+        "p50Ms": 53.5,
+        "p99Ms": 78.9
+      },
+      {
+        "name": "POST /api/emergency",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 402.1,
+        "p50Ms": 49.2,
+        "p99Ms": 75.0
+      }
+    ]
+  }
+}
