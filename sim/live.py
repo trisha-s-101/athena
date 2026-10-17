@@ -12,6 +12,11 @@ time, so --speed 60 gives 1 sim hour per real minute (the contract's example).
 
 This is the only part of sim/ that talks to the API, and it does so over HTTP
 only (golden rule 3). Offline experiments call engine/ directly instead.
+
+The default policy is noSharing because the feed has no event for a unit
+changing hospital: an exchange run would move units the API never hears about,
+leaving its stock out of step with the sim's. In live mode the transfers are
+meant to come from the dashboard reserving against the API instead.
 """
 
 import argparse
@@ -55,7 +60,7 @@ def _checkHealth(apiBase: str) -> None:
 
 
 def streamScenario(scenario: dict, apiBase: str, speed: float,
-                   policyName: str = "exchange", dryRun: bool = False) -> dict:
+                   policyName: str = "noSharing", dryRun: bool = False) -> dict:
     """
     Stream one scenario's feed events to the API in sim-clock order.
     Returns counts per event type.
@@ -104,8 +109,8 @@ def main() -> None:
                         help="Scenario seed")
     parser.add_argument("--days", type=int, default=None,
                         help="Override simDays from assumptions.json")
-    parser.add_argument("--policy", default="exchange", choices=("noSharing", "exchange"),
-                        help="Policy to run live")
+    parser.add_argument("--policy", default="noSharing", choices=("noSharing", "exchange"),
+                        help="Policy to run live; 'exchange' moves units the API is never told about")
     parser.add_argument("--dryRun", action="store_true",
                         help="Print events without posting them")
     args = parser.parse_args()
