@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 
-from sim.generate import generateScenario
+from sim.generate import _SHELF_LIFE_DAYS, generateScenario
 
 ASSUMPTIONS = {
     "simDays": 10,
@@ -66,30 +66,55 @@ class TestGenerateScenario(unittest.TestCase):
         for unit in scenario["deliveries"]:
             collected = datetime.strptime(unit["collectedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
             expires = datetime.strptime(unit["expiresAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-            self.assertEqual((expires - collected).days, 7, f"Unit {unit['unitId']}: shelf life != 7")
+            self.assertEqual((expires - collected).days, _SHELF_LIFE_DAYS,
+                             f"Unit {unit['unitId']}: shelf life != {_SHELF_LIFE_DAYS}")
 
     def test_remaining_shelf_life_on_arrival(self):
         from datetime import timedelta
         scenario = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
         simStart = datetime(2026, 1, 5, 0, 0, 0, tzinfo=timezone.utc)
         minLeft = ASSUMPTIONS["remainingShelfLifeOnArrivalDays"]["min"]
-        earliest_possible_collected = simStart - timedelta(days=7 - minLeft)
+        earliest_possible_collected = simStart - timedelta(days=_SHELF_LIFE_DAYS - minLeft)
         for unit in scenario["deliveries"]:
             collected = datetime.strptime(unit["collectedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
             self.assertGreaterEqual(collected, earliest_possible_collected,
                                     f"Unit {unit['unitId']} collected too early")
 
-    def test_blood_group_distribution(self):
+    def test_demand_follows_blood_group_mix(self):
+        """Demand reflects the population mix. Deliveries do not: they follow each
+        hospital's ordering policy, which over-supplies rare groups it must keep
+        a minimum of and under-supplies common ones it turns over quickly."""
         big = generateScenario({**ASSUMPTIONS, "simDays": 90}, HOSPITALS, SEED)
         totals: dict = {}
-        for unit in big["deliveries"]:
-            bg = unit["bloodGroup"]
-            totals[bg] = totals.get(bg, 0) + 1
+        for record in big["demand"]:
+            totals[record["bloodGroup"]] = totals.get(record["bloodGroup"], 0) + record["units"]
         grand = sum(totals.values())
-        for bg, expected_frac in ASSUMPTIONS["bloodGroupMix"].items():
-            actual_frac = totals.get(bg, 0) / grand
-            self.assertLess(abs(actual_frac - expected_frac), 0.05,
-                            f"{bg}: expected {expected_frac:.3f}, got {actual_frac:.3f}")
+        for bg, expectedFraction in ASSUMPTIONS["bloodGroupMix"].items():
+            actualFraction = totals.get(bg, 0) / grand
+            self.assertLess(abs(actualFraction - expectedFraction), 0.05,
+                            f"{bg}: expected {expectedFraction:.3f}, got {actualFraction:.3f}")
+
+    def test_deliveries_track_target_stock(self):
+        """A hospital should not be sent more of a group than its target cover
+        plus what it actually used -- that was the old blind-shipment behavior."""
+        big = generateScenario({**ASSUMPTIONS, "simDays": 90}, HOSPITALS, SEED)
+        delivered: dict = {}
+        for unit in big["deliveries"]:
+            key = (unit["hospitalId"], unit["bloodGroup"])
+            delivered[key] = delivered.get(key, 0) + 1
+        used: dict = {}
+        for record in big["demand"]:
+            key = (record["hospitalId"], record["bloodGroup"])
+            used[key] = used.get(key, 0) + record["units"]
+        sizes = {x["hospitalId"]: x["sizeCategory"] for x in HOSPITALS}
+        for (hospitalId, bloodGroup), count in delivered.items():
+            cover = (ASSUMPTIONS["targetStockDays"][sizes[hospitalId]]
+                     * ASSUMPTIONS["dailyDemandMean"][sizes[hospitalId]]
+                     * ASSUMPTIONS["bloodGroupMix"][bloodGroup])
+            # Cap: everything consumed, plus one shelf-full restocked each day it could expire.
+            ceiling = used.get((hospitalId, bloodGroup), 0) + max(1, round(cover)) * 90
+            self.assertLessEqual(count, ceiling,
+                                 f"{hospitalId}/{bloodGroup}: {count} delivered exceeds plausible ceiling")
 
     def test_demand_keys(self):
         scenario = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
