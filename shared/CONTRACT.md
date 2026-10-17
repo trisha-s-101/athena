@@ -1,7 +1,10 @@
-# Platelet Exchange: Team Contract (v1.2)
+# Platelet Exchange: Team Contract (v1.3)
 
 **This file is the source of truth.** If your code disagrees with it, your code is wrong.
 Only Neil changes this file. Every change bumps the version number and gets announced in the group chat.
+
+**Changes in v1.3:**
+- §3: shelf life is **5 days** from collection, not 7, per [Leeds Teaching Hospitals](https://www.leedsth.nhs.uk/services/pathology/blood-transfusion-services/blood-products/). Seven days applies only where platelets are bacterially screened, so 5 is the conservative figure. `sim/` already uses 5; `web/tests/core.test.js` still asserts 7 and needs updating.
 
 **Changes in v1.2** (everything here describes code already on `main`):
 - §7: `comparison.json` gains multi-seed `seeds`, `statistics` and `stressScenarios` keys alongside the original ones. `sim.live` flags documented.
@@ -57,7 +60,7 @@ A live platelet exchange for ~10 Greater Manchester hospitals. It tracks each ho
 - **Times:** ISO 8601 UTC strings, e.g. `"2026-01-05T14:00:00Z"`. Dates are `"2026-01-05"`. The sim clock starts Monday `2026-01-05T00:00:00Z`.
 - **IDs are strings:** hospitals `"H01"`–`"H10"`, units `"U000001"`, reservations `"R000001"`, events `"E000001"`.
 - **Blood groups:** exactly one of `"O+" "O-" "A+" "A-" "B+" "B-" "AB+" "AB-"`.
-- **Shelf life:** 7 days from collection, so `expiresAt = collectedAt + 7 days`.
+- **Shelf life:** 5 days from collection, so `expiresAt = collectedAt + 5 days`.
 - **Unit status:** `available | reserved | inTransit | transfused | expired`.
 - **Spelling:** American English in code, UI and docs.
 
