@@ -94,30 +94,30 @@ def generateScenario(assumptions: dict, hospitals: list[dict], seed: int) -> dic
             effectiveMean: float = baseMean * (weekendFactor if isWeekend else 1.0)
 
             # --- deliveries ---
-            # Number of units delivered today ≈ expected daily demand
-            # (supply is calibrated to demand in the real world)
-            numDelivered = max(1, _poissonApprox(effectiveMean, rng))
+            # Deliver per blood group so supply tracks demand by group (calibrated model).
+            # Blood banks send targeted shipments by group, so each group's supply and
+            # demand come from the same Poisson distribution.
+            for bloodGroup, mixFraction in bloodGroupMix.items():
+                groupMean = effectiveMean * mixFraction
+                numDelivered = _poissonApprox(groupMean, rng)
+                for _ in range(numDelivered):
+                    unitCounter += 1
+                    unitId = f"U{unitCounter:06d}"
 
-            for _ in range(numDelivered):
-                unitCounter += 1
-                unitId = f"U{unitCounter:06d}"
-                bloodGroup = _sampleBloodGroup(bloodGroupMix, rng)
+                    # remainingShelfLife is how many days left when it arrives
+                    remainingDays = rng.randint(shelfLeft["min"], shelfLeft["max"])
+                    collectedAt = dayStart - timedelta(days=_SHELF_LIFE_DAYS - remainingDays)
+                    expiresAt = collectedAt + timedelta(days=_SHELF_LIFE_DAYS)
 
-                # remainingShelfLife is how many days left when it arrives
-                remainingDays = rng.randint(shelfLeft["min"], shelfLeft["max"])
-                # collectedAt is in the past so that expiresAt = collectedAt + 7 days
-                # and remainingDays = expiresAt - deliveredAt in whole days
-                collectedAt = dayStart - timedelta(days=_SHELF_LIFE_DAYS - remainingDays)
-                expiresAt = collectedAt + timedelta(days=_SHELF_LIFE_DAYS)
-
-                deliveries.append({
-                    "unitId": unitId,
-                    "bloodGroup": bloodGroup,
-                    "collectedAt": _isoUtc(collectedAt),
-                    "expiresAt": _isoUtc(expiresAt),
-                    "hospitalId": hospitalId,
-                    "status": "available",
-                })
+                    deliveries.append({
+                        "unitId": unitId,
+                        "bloodGroup": bloodGroup,
+                        "collectedAt": _isoUtc(collectedAt),
+                        "expiresAt": _isoUtc(expiresAt),
+                        "hospitalId": hospitalId,
+                        "status": "available",
+                        "deliveredAt": _isoUtc(dayStart),  # sim-internal; not in CONTRACT Unit shape
+                    })
 
             # --- demand ---
             # Draw per-blood-group demand; only emit records where units > 0
