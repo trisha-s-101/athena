@@ -218,7 +218,7 @@ Check that the code works on this machine:
 ```bash
 python -m unittest discover api/tests
 ```
-**Expect:** the last line says `OK (skipped=9)`. Skipped tests are normal: they need a test database that the instance doesn't have.
+**Expect:** the last line starts with `OK`, for example `OK (skipped=11)`. The number can change between versions. Skipped tests are normal: they need a test database that the instance doesn't have. If it says `FAILED`, stop and send Neil the output.
 
 Start the app:
 

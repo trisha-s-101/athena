@@ -1,7 +1,8 @@
 """Platelet exchange HTTP API (CONTRACT.md section 8).
 
-Real (Postgres): /health, /hospitals, /stock, /feed/events, /reservations, /reservations/{id}/complete.
-Still stubs returning the contract's example JSON: /recommendations, /emergency, /metrics, /events.
+Real (Postgres): /health, /hospitals, /stock, /metrics, /feed/events, /reservations,
+/reservations/{id}/complete.
+Still stubs returning the contract's example JSON: /recommendations, /emergency, /events.
 /simulation/results serves results/comparison.json when it exists.
 
 Run from the repo root with DATABASE_URL set: uvicorn api.main:app --host 0.0.0.0 --port 8000
@@ -212,7 +213,31 @@ def createEmergency(request: EmergencyRequest):
 
 @router.get("/metrics")
 def getMetrics():
-    return examples.exampleMetrics
+    """Counts for the sim's current UTC day. wasteRate matches the sim's SimResult: expired / delivered."""
+    with transaction() as cursor:
+        simTime = currentSimTime(cursor)
+        cursor.execute(
+            """
+            WITH today AS (SELECT date_trunc('day', %(simTime)s::timestamptz) AS day_start)
+            SELECT
+                (SELECT count(*) FROM units WHERE status = 'available'),
+                (SELECT count(*) FROM units WHERE status = 'available'
+                     AND expires_at < %(simTime)s::timestamptz + interval '24 hours'),
+                count(*) FILTER (WHERE type = 'expiry' AND at >= day_start AND at < day_start + interval '1 day'),
+                count(*) FILTER (WHERE type = 'demandUnmet' AND at >= day_start AND at < day_start + interval '1 day'),
+                count(*) FILTER (WHERE type = 'transfer' AND at >= day_start AND at < day_start + interval '1 day'),
+                count(*) FILTER (WHERE type = 'expiry'),
+                count(*) FILTER (WHERE type = 'delivery')
+            FROM today LEFT JOIN events ON true
+            GROUP BY day_start
+            """,
+            {"simTime": simTime},
+        )
+        (unitsAvailable, expiringIn24h, wastedToday, shortagesToday, transfersToday,
+         totalExpired, totalDelivered) = cursor.fetchone()
+    return {"simTime": simTime, "unitsAvailable": unitsAvailable, "expiringIn24h": expiringIn24h,
+            "wastedToday": wastedToday, "shortagesToday": shortagesToday, "transfersToday": transfersToday,
+            "wasteRate": round(totalExpired / totalDelivered, 4) if totalDelivered else 0.0}
 
 
 @router.get("/events")
