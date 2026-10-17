@@ -1,0 +1,359 @@
+"""
+sim/simulate.py  --  Core simulation engine (CONTRACT §7).
+
+runSimulation(scenario, policyName, seed) -> SimResult
+
+The sim clock ticks in 6-hour steps. Each tick:
+  1. Deliver units whose day matches the current date.
+  2. Arrive any in-transit units whose travel time has elapsed.
+  3. Expire units whose expiresAt <= now.
+  4. exchange only: call engine.forecastDemand + engine.recommendTransfers
+     and dispatch recommended transfers.
+  5. At midnight (step 0 of each day): issue FIFO demand and record daily stats.
+
+FIFO issuing: oldest unit (by collectedAt) is transfused first.
+"""
+
+import copy
+import json
+import pathlib
+from datetime import datetime, timedelta, timezone
+
+_REPO_ROOT = pathlib.Path(__file__).parents[1]
+_SIM_START = datetime(2026, 1, 5, 0, 0, 0, tzinfo=timezone.utc)
+_STEP_HOURS = 6
+_STEPS_PER_DAY = 24 // _STEP_HOURS  # 4
+
+
+# ---------------------------------------------------------------------------
+# Shared-file helpers (safe defaults when files not yet committed)
+# ---------------------------------------------------------------------------
+
+def _loadJson(relPath: str, default):
+    p = _REPO_ROOT / relPath
+    if p.exists():
+        return json.loads(p.read_text())
+    return default
+
+
+# Synthetic travel times for the 10 default hospitals (H01–H10).
+# Used only when shared/travelTimes.json is not yet committed.
+# Roughly modelled on Greater Manchester road distances (minutes by courier).
+_DEFAULT_TRAVEL_TIMES: list[dict] = [
+    {"fromHospitalId": f"H{i:02d}", "toHospitalId": f"H{j:02d}",
+     "minutes": 10 + abs(i - j) * 8 + (i + j) % 7 * 3}
+    for i in range(1, 11) for j in range(1, 11) if i != j
+]
+
+# Standard ABO/RhD compatibility (simplified from UK transfusion guidelines).
+# Keys are recipient groups; each list entry is a compatible donor with a preference penalty.
+# penalty=0 → identical group (preferred), higher → less preferred but compatible.
+_DEFAULT_COMPATIBILITY: dict = {
+    "O+":  [{"donor": "O+",  "penalty": 0}, {"donor": "O-",  "penalty": 1}],
+    "O-":  [{"donor": "O-",  "penalty": 0}],
+    "A+":  [{"donor": "A+",  "penalty": 0}, {"donor": "A-",  "penalty": 1},
+            {"donor": "O+",  "penalty": 2}, {"donor": "O-",  "penalty": 3}],
+    "A-":  [{"donor": "A-",  "penalty": 0}, {"donor": "O-",  "penalty": 1}],
+    "B+":  [{"donor": "B+",  "penalty": 0}, {"donor": "B-",  "penalty": 1},
+            {"donor": "O+",  "penalty": 2}, {"donor": "O-",  "penalty": 3}],
+    "B-":  [{"donor": "B-",  "penalty": 0}, {"donor": "O-",  "penalty": 1}],
+    "AB+": [{"donor": "AB+", "penalty": 0}, {"donor": "AB-", "penalty": 1},
+            {"donor": "A+",  "penalty": 2}, {"donor": "A-",  "penalty": 3},
+            {"donor": "B+",  "penalty": 2}, {"donor": "B-",  "penalty": 3},
+            {"donor": "O+",  "penalty": 4}, {"donor": "O-",  "penalty": 5}],
+    "AB-": [{"donor": "AB-", "penalty": 0}, {"donor": "A-",  "penalty": 1},
+            {"donor": "B-",  "penalty": 1}, {"donor": "O-",  "penalty": 2}],
+}
+
+
+def _loadTravelTimes() -> list[dict]:
+    return _loadJson("shared/travelTimes.json", _DEFAULT_TRAVEL_TIMES)
+
+
+def _loadCompatibility() -> dict:
+    return _loadJson("shared/compatibility.json", _DEFAULT_COMPATIBILITY)
+
+
+# ---------------------------------------------------------------------------
+# Engine import with graceful fallback stub
+# ---------------------------------------------------------------------------
+
+def _stubForecast(history: list[dict], horizonDays: int = 3) -> dict:
+    """Naive forecast: repeat yesterday's demand for each hospital/group."""
+    latest: dict = {}
+    for rec in history:
+        key = (rec["hospitalId"], rec["bloodGroup"])
+        latest[key] = rec["units"]
+    result: dict = {}
+    for (hId, bg), units in latest.items():
+        result.setdefault(hId, {})[bg] = [float(units)] * horizonDays
+    return result
+
+
+def _stubRecommendTransfers(*args, **kwargs) -> list[dict]:
+    return []
+
+
+try:
+    import engine as _engine
+    _forecastDemand = _engine.forecastDemand
+    _recommendTransfers = _engine.recommendTransfers
+except Exception:
+    _forecastDemand = _stubForecast
+    _recommendTransfers = _stubRecommendTransfers
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+# Event types the API accepts at POST /api/feed/events (CONTRACT §8).
+FEED_EVENT_TYPES = frozenset({"delivery", "transfusion", "expiry", "demandUnmet", "clock"})
+
+
+def _contractUnit(unit: dict) -> dict:
+    """Drop the sim-internal deliveredAt field, leaving a CONTRACT §5 Unit."""
+    return {k: v for k, v in unit.items() if k != "deliveredAt"}
+
+
+def _parseUtc(s: str) -> datetime:
+    return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+
+def _isoUtc(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _buildDemandIndex(demand: list[dict]) -> dict:
+    """demand[date][hospitalId][bloodGroup] = units"""
+    idx: dict = {}
+    for rec in demand:
+        idx.setdefault(rec["date"], {}).setdefault(rec["hospitalId"], {})[rec["bloodGroup"]] = rec["units"]
+    return idx
+
+
+def _buildDeliveryIndex(deliveries: list[dict]) -> dict:
+    """deliveries[date][hospitalId] = [unit, ...]"""
+    idx: dict = {}
+    for unit in deliveries:
+        if "deliveredAt" in unit:
+            dateStr = unit["deliveredAt"][:10]
+        else:
+            # Fallback for units from external sources without deliveredAt:
+            # clamp collectedAt to simStart as best-effort delivery date.
+            dt = _parseUtc(unit["collectedAt"])
+            dateStr = max(dt.date(), _SIM_START.date()).strftime("%Y-%m-%d")
+        idx.setdefault(dateStr, {}).setdefault(unit["hospitalId"], []).append(dict(unit))
+    return idx
+
+
+# ---------------------------------------------------------------------------
+# Main simulation
+# ---------------------------------------------------------------------------
+
+def _inferSimDays(deliveries: list[dict]) -> int:
+    """Infer the horizon from deliveredAt dates (added by generate.py)."""
+    allDates = {u["deliveredAt"][:10] for u in deliveries if "deliveredAt" in u}
+    if not allDates:
+        return 90
+    from datetime import date
+    maxDate = max(date.fromisoformat(d) for d in allDates)
+    return (maxDate - _SIM_START.date()).days + 1
+
+
+def simulateEvents(scenario: dict, policyName: str, seed: int):
+    """
+    Run the simulation and yield each event as it happens.
+
+    Yields CONTRACT §8 feed events ("clock", "delivery", "transfusion",
+    "expiry", "demandUnmet") interleaved with two sim-internal events:
+      {"type": "transfer", ...}        a dispatched engine recommendation
+      {"type": "dayEnd", "date": ...}  end-of-day marker
+
+    runSimulation aggregates this stream into a SimResult; sim.live filters it
+    down to the five contract types and POSTs them to the API.
+    """
+    if policyName not in ("noSharing", "exchange"):
+        raise ValueError(f"Unknown policy: {policyName}")
+
+    deliveries: list[dict] = scenario["deliveries"]
+    demand: list[dict] = scenario["demand"]
+
+    simDays = _inferSimDays(deliveries)
+    travelTimes = _loadTravelTimes()
+    compatibility = _loadCompatibility()
+
+    demandIdx = _buildDemandIndex(demand)
+    deliveryIdx = _buildDeliveryIndex(deliveries)
+
+    # inventory[hospitalId] = list of unit dicts (mutable copies)
+    inventory: dict[str, list[dict]] = {}
+
+    # in-transit: list of {"arrivalTime": datetime, "unit": dict}
+    inTransit: list[dict] = []
+
+    # history of demand records seen so far (for engine forecasts)
+    demandHistory: list[dict] = []
+
+    for dayIndex in range(simDays):
+        dayStart = _SIM_START + timedelta(days=dayIndex)
+        dateStr = dayStart.strftime("%Y-%m-%d")
+
+        for stepIndex in range(_STEPS_PER_DAY):
+            now = dayStart + timedelta(hours=stepIndex * _STEP_HOURS)
+            nowIso = _isoUtc(now)
+
+            yield {"type": "clock", "simTime": nowIso}
+
+            # 1. Deliver units (only at midnight, step 0)
+            if stepIndex == 0:
+                for hospitalId, units in deliveryIdx.get(dateStr, {}).items():
+                    inventory.setdefault(hospitalId, [])
+                    for unit in units:
+                        u = dict(unit)
+                        u["status"] = "available"
+                        inventory[hospitalId].append(u)
+                        yield {"type": "delivery", "unit": _contractUnit(u)}
+
+            # 2. Arrive in-transit units
+            arrived = [t for t in inTransit if t["arrivalTime"] <= now]
+            for arrival in arrived:
+                unit = arrival["unit"]
+                unit["status"] = "available"
+                inventory.setdefault(unit["hospitalId"], []).append(unit)
+            inTransit = [t for t in inTransit if t["arrivalTime"] > now]
+
+            # 3. Expire units
+            for hospitalId, units in inventory.items():
+                for unit in units:
+                    if unit["status"] == "available":
+                        expiresAt = _parseUtc(unit["expiresAt"])
+                        if now >= expiresAt:
+                            unit["status"] = "expired"
+                            yield {"type": "expiry", "unitId": unit["unitId"]}
+
+            # 4. Exchange only: run engine every 6h
+            if policyName == "exchange":
+                availableStock = [
+                    _contractUnit(u)
+                    for units in inventory.values()
+                    for u in units if u["status"] == "available"
+                ]
+                forecast = _forecastDemand(demandHistory, horizonDays=3)
+                transfers = _recommendTransfers(
+                    availableStock, forecast, travelTimes, compatibility, nowIso
+                )
+                for transfer in transfers:
+                    unitId = transfer["unitId"]
+                    fromHId = transfer["fromHospitalId"]
+                    toHId = transfer["toHospitalId"]
+                    travelMin = transfer.get("travelMinutes", 0)
+
+                    # Find and mark the unit
+                    fromInv = inventory.get(fromHId, [])
+                    for unit in fromInv:
+                        if unit["unitId"] == unitId and unit["status"] == "available":
+                            unit["status"] = "inTransit"
+                            transitUnit = dict(unit)
+                            transitUnit["hospitalId"] = toHId
+                            arrivalTime = now + timedelta(minutes=travelMin)
+                            inTransit.append({"arrivalTime": arrivalTime, "unit": transitUnit})
+                            yield {
+                                "type": "transfer",
+                                "unitId": unitId,
+                                "fromHospitalId": fromHId,
+                                "toHospitalId": toHId,
+                                "travelMinutes": travelMin,
+                            }
+                            break
+
+        # 5. Issue FIFO demand at end of day
+        dayDemand = demandIdx.get(dateStr, {})
+        for hospitalId, bgDemand in dayDemand.items():
+            inv = inventory.get(hospitalId, [])
+            for bloodGroup, unitsNeeded in bgDemand.items():
+                demandHistory.append({
+                    "date": dateStr,
+                    "hospitalId": hospitalId,
+                    "bloodGroup": bloodGroup,
+                    "units": unitsNeeded,
+                })
+
+                # FIFO: sort available units by collectedAt (oldest first)
+                available = sorted(
+                    [u for u in inv if u["status"] == "available" and u["bloodGroup"] == bloodGroup],
+                    key=lambda u: u["collectedAt"],
+                )
+                toTransfuse = min(unitsNeeded, len(available))
+                shortage = unitsNeeded - toTransfuse
+
+                for unit in available[:toTransfuse]:
+                    unit["status"] = "transfused"
+                    yield {"type": "transfusion", "unitId": unit["unitId"]}
+
+                if shortage > 0:
+                    yield {
+                        "type": "demandUnmet",
+                        "hospitalId": hospitalId,
+                        "bloodGroup": bloodGroup,
+                        "units": shortage,
+                    }
+
+        yield {"type": "dayEnd", "date": dateStr}
+
+
+def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
+    """
+    Simulate platelet exchange over the scenario's time horizon.
+    policyName: "noSharing" | "exchange"
+    Returns a SimResult (CONTRACT §5).
+    """
+    totalDelivered = 0
+    totalTransfused = 0
+    totalWasted = 0
+    totalShortages = 0
+    totalTransfers = 0
+
+    dayWasted = 0
+    dayShortages = 0
+    dayTransfers = 0
+
+    daily: list[dict] = []
+
+    for event in simulateEvents(scenario, policyName, seed):
+        eventType = event["type"]
+        if eventType == "delivery":
+            totalDelivered += 1
+        elif eventType == "transfusion":
+            totalTransfused += 1
+        elif eventType == "expiry":
+            totalWasted += 1
+            dayWasted += 1
+        elif eventType == "demandUnmet":
+            totalShortages += event["units"]
+            dayShortages += event["units"]
+        elif eventType == "transfer":
+            totalTransfers += 1
+            dayTransfers += 1
+        elif eventType == "dayEnd":
+            daily.append({
+                "date": event["date"],
+                "wasted": dayWasted,
+                "shortages": dayShortages,
+                "transfers": dayTransfers,
+            })
+            dayWasted = dayShortages = dayTransfers = 0
+
+    wasteRate = round(totalWasted / totalDelivered, 4) if totalDelivered > 0 else 0.0
+
+    return {
+        "policy": policyName,
+        "days": len(daily),
+        "unitsDelivered": totalDelivered,
+        "unitsTransfused": totalTransfused,
+        "unitsWasted": totalWasted,
+        "wasteRate": wasteRate,
+        "shortageEvents": totalShortages,
+        "transfers": totalTransfers,
+        "daily": daily,
+    }

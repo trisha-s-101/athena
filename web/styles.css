@@ -423,3 +423,32 @@ footer {
   }
 
 }
+
+/* Error bars across seeds and the benchmark panel. */
+.errorBarGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 8px;
+}
+
+.benchmarkHeadline {
+  font-size: 18px;
+  margin: 8px 0 4px;
+}
+
+.pass {
+  color: var(--green);
+  font-weight: 650;
+}
+
+.fail {
+  color: var(--red);
+  font-weight: 650;
+}
+
+@media (max-width: 1000px) {
+  .errorBarGrid {
+    grid-template-columns: 1fr;
+  }
+}

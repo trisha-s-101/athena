@@ -1,0 +1,5 @@
+[
+  {"hospitalId": "H01", "name": "Fixture Large Hospital", "lat": 53.4627, "lng": -2.2265, "sizeCategory": "large", "hasHaematology": true},
+  {"hospitalId": "H02", "name": "Fixture Medium Hospital", "lat": 53.4800, "lng": -2.2400, "sizeCategory": "medium", "hasHaematology": false},
+  {"hospitalId": "H03", "name": "Fixture Small Hospital", "lat": 53.5000, "lng": -2.3000, "sizeCategory": "small", "hasHaematology": false}
+]

@@ -173,21 +173,235 @@ Problems: none / (describe)
 
 ## Part 8: Deploying new versions (repeat whenever Neil asks)
 
-Neil will add the exact app start commands here once the app exists (around 4 hours in). The routine will look like this:
+The app runs inside **tmux**, so it keeps running after you disconnect:
+- Start a session: `tmux new -s app`
+- Leave it running: press `Ctrl+B`, then `D`
+- Come back to it: `tmux attach -t app`
+- Stop the app: inside the session, press `Ctrl+C`
+- Check you're inside tmux: there's a **green bar along the bottom** of the screen. No green bar means you're not in tmux, and the app will stop when you disconnect.
+
+**Mac keyboards:** `Ctrl` means the **control (⌃)** key, not Command. `Ctrl+B`, then `D` means: hold control and press `b`, **let go of both**, then press a **lowercase** `d` on its own. Shift+D opens a menu instead; if that happens, press `q` and try again. `Ctrl+C` is control + `c` (Command+C only copies text).
+
+Port 8000 isn't open, so the app only listens inside the instance, and everyone reaches it through the SSH tunnel from Part 6.
+
+### 8A: First start (do this once)
+
+Connect to the instance (Part 0), then start a tmux session:
+
+```bash
+tmux new -s app
+```
+**Expect:** the screen clears and a green bar appears at the bottom. Everything below is typed inside this session.
+
+Load the Python environment and the database password. These must be run **inside** tmux, every time you start a new session:
 
 ```bash
 source ~/venv/bin/activate
 source ~/plateletExchange.env
 cd ~/plateletExchange
+```
+**Expect:** your prompt starts with `(venv)`.
+
+Get the latest code:
+
+```bash
 git pull
-# Neil will add: database setup and app start commands
+```
+**Expect:** a list of changed files, or `Already up to date.` If it asks for a username and password, use your GitHub username and the token from Part 5.
+
+Create the database tables and load the hospitals:
+
+```bash
+python -m db.seed
+```
+**Expect:** `Seeded: 10 hospitals, 90 travel times` (the numbers may differ). If it says `Seed failed: Missing .../shared/hospitals.json`, the hospital data isn't in the repo yet. **Stop and tell Neil.**
+
+Check that the code works on this machine:
+
+```bash
+python -m unittest discover api/tests
+```
+**Expect:** the last line starts with `OK`, for example `OK (skipped=11)`. The number can change between versions. Skipped tests are normal: they need a test database that the instance doesn't have. If it says `FAILED`, stop and send Neil the output.
+
+Start the app:
+
+```bash
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+**Wait** until you see a line containing `Uvicorn running on http://127.0.0.1:8000`. It keeps running and doesn't return to the prompt. That's correct.
+
+Only then, leave it running: press `Ctrl+B`, let go, then press lowercase `d` (see the Mac note above).
+**Expect:** the green bar disappears and you see `[detached (from session app)]`. If you don't see that message, you weren't inside tmux: **stop and tell Neil.**
+
+Check the app answers:
+
+```bash
+curl -sS localhost:8000/api/health
+```
+**Expect:** `{"status":"ok","arch":"s390x","dbOk":true}`. If `dbOk` is `false`, or `curl` prints an error or nothing at all, see Troubleshooting.
+
+Check the app will keep running after you disconnect:
+
+```bash
+tmux ls
+```
+**Expect:** a line starting with `app:`.
+
+### 8B: Open the dashboard (on your laptop)
+
+Open a **new terminal on your laptop** (not connected to the instance) and run the tunnel from Part 6:
+
+```bash
+ssh -i path/to/your-key.pem -L 8000:localhost:8000 linux1@YOUR_INSTANCE_IP
+```
+Keep that terminal open. Then open **http://localhost:8000** in your browser and untick **Use mock data** at the top right.
+**Expect:** the status next to it changes to `● API connected`. Anyone else with the SSH key can do the same on their own laptop.
+
+### 8C: Deploying a new version (whenever Neil asks)
+
+Connect to the instance, then go back into the running session:
+
+```bash
+tmux attach -t app
+```
+**Expect:** the green bar and the running app. If it says `no sessions` or `no server running`, the app isn't running anymore: do **8A** from the start instead.
+
+Press `Ctrl+C` to stop the app. **Expect:** your prompt comes back.
+
+Get the latest code on its own first, because it may ask for your token:
+
+```bash
+git pull
 ```
 
-The app will run inside **tmux**, so it keeps running after you disconnect:
-- Start a session: `tmux new -s app`
-- Leave it running: press `Ctrl+B`, then `D`
-- Come back to it: `tmux attach -t app`
-- Stop the app: inside the session, press `Ctrl+C`
+Then run these:
+
+```bash
+python -m db.seed
+python -m unittest discover api/tests
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+**Expect:** the same results as in 8A. `python -m db.seed` is safe to run every time: it only adds what's missing and never deletes live data.
+
+**Wait** for `Uvicorn running on http://127.0.0.1:8000`, then press `Ctrl+B`, let go, and press lowercase `d`. Run the `curl -sS` and `tmux ls` checks from 8A. Post "Deployed" in the group chat.
+
+### 8D: Wiping the database (only when Neil asks)
+
+This deletes every unit, reservation and event, for example before a rehearsal. Stop the app first (8C), then:
+
+```bash
+python -m db.seed --reset
+```
+**Expect:** `Reset and seeded: ...`. Start the app again as in 8C.
+
+---
+
+## Part 9: Running live mode (the sim feeding the dashboard)
+
+Live mode replays a simulated scenario into the app: units are delivered, used and expire, and the dashboard updates every 5 seconds. It runs in its **own** tmux session called `sim`, next to the app's session.
+
+The app must already be running (Part 8). Check:
+
+```bash
+curl -sS localhost:8000/api/health
+```
+**Expect:** `{"status":"ok","arch":"s390x","dbOk":true}`
+
+### 9A: Start a live run
+
+Start a second tmux session:
+
+```bash
+tmux new -s sim
+```
+**Expect:** the green bar at the bottom.
+
+```bash
+source ~/venv/bin/activate
+source ~/plateletExchange.env
+cd ~/plateletExchange
+```
+
+**Wipe the database first, every time.** A new run replays the same units from the start, and the app rejects units it has already seen. This is safe while the app is running:
+
+```bash
+python -m db.seed --reset
+```
+**Expect:** `Reset and seeded: 10 hospitals, 90 travel times`
+
+Start the stream:
+
+```bash
+python -m sim.live --api http://localhost:8000 --speed 1440
+```
+**Expect:** `[sim.live] API healthy: ...`, then `[sim.live] Streaming 90 days ...`, then a new line about every 15 seconds starting `[sim.live] 2026-01-05T...`. `--speed 1440` runs one sim day per real minute, so a full 90-day run takes about 90 minutes. Neil may ask for a different speed for the demo.
+
+Leave it running: press `Ctrl+B`, let go, then press lowercase `d`.
+**Expect:** `[detached (from session sim)]`.
+
+### 9B: Check it's working
+
+```bash
+curl -sS localhost:8000/api/metrics
+```
+**Expect:** `simTime` moving forward each time you run it, and `unitsAvailable` above 0.
+
+On the dashboard (Part 8B), hospitals fill with stock. **Recommended transfers** appear after about one sim day (about a minute at `--speed 1440`), once there's demand history to forecast from.
+
+### 9C: Stop a live run
+
+```bash
+tmux attach -t sim
+```
+Press `Ctrl+C`. **Expect:** your prompt comes back. The data stays in the database until the next wipe. To start again, go back to 9A's wipe step. When a run finishes on its own, it prints `[sim.live] Done. Events sent:` and a count of each event type.
+
+---
+
+## Part 10: Running the benchmarks (only when Neil asks)
+
+These produce the mainframe numbers for the pitch: 1,000 people trying to reserve the same unit at the same moment (exactly one must succeed), and how fast each part of the app answers. They take about two minutes and add test data, so the database is wiped before and after.
+
+The app must be running (Part 8), and live mode must be **stopped** (9C).
+
+### 10A: Run them
+
+In any window connected to the instance (tmux isn't needed, as long as you stay connected until they finish):
+
+```bash
+source ~/venv/bin/activate
+source ~/plateletExchange.env
+cd ~/plateletExchange
+ulimit -n 4096
+python -m db.seed --reset
+```
+**Expect:** `Reset and seeded: 10 hospitals, 90 travel times`. (`ulimit -n 4096` lets this window hold 1,000 connections open at once. It prints nothing.)
+
+The reservation race:
+
+```bash
+python -m bench.reserveRace
+```
+**Expect:** `arch s390x: 1000 concurrent reservations -> 1 accepted, 999 conflicts, 0 other`, then a line starting `[bench.reserveRace] PASSED`. If it says `FAILED`, **stop and send Neil the output.**
+
+The speed test:
+
+```bash
+python -m bench.latency
+```
+**Expect:** one line per endpoint, each ending in `errors 0`, then `Wrote .../results/benchmark.json`.
+
+### 10B: Send Neil the results
+
+```bash
+cat results/benchmark.json
+```
+Copy everything it prints and send it to Neil. It contains only timings, no passwords. The dashboard's benchmark panel also reads it straight from the app.
+
+Then wipe the test data:
+
+```bash
+python -m db.seed --reset
+```
 
 ---
 
@@ -200,4 +414,21 @@ The app will run inside **tmux**, so it keeps running after you disconnect:
 | `Could not get lock /var/lib/dpkg/lock` | Another install is running. Wait 2 minutes and retry. |
 | `(venv)` disappeared from your prompt | You reconnected. Run `source ~/venv/bin/activate` again. |
 | `psql: ... password authentication failed` | The password was typed wrong. Ask Neil to help reset it. |
+| `DATABASE_URL is not set` from `db.seed`, or `"dbOk":false` | The password file wasn't loaded in this tmux session. `tmux attach -t app`, press `Ctrl+C`, run `source ~/plateletExchange.env`, then start the app again. |
+| `No module named 'api'` or `No module named 'db'` | You're in the wrong folder. Run `cd ~/plateletExchange` and try again. |
+| `No module named 'fastapi'` (or `uvicorn`, `psycopg2`) | The Python environment isn't loaded. Run `source ~/venv/bin/activate` and try again. |
+| `address already in use` when starting the app | The app is already running in another session. Run `tmux attach -t app` instead of starting a new one. |
+| `duplicate session: app` | A session already exists. Use `tmux attach -t app` instead of `tmux new -s app`. |
+| `curl` prints nothing, `Connection refused`, or `Failed to connect` | The app isn't running. Run `tmux attach -t app` and look at the screen: if it's a plain prompt, start the app again (the `python -m uvicorn ...` line) and wait for `Uvicorn running`. If there's an error, send Neil the text. |
+| `no sessions` or `no server running` from `tmux attach` | The tmux session is gone, so the app stopped. Do 8A from the start. |
+| `Ctrl+B`, `D` does nothing, or the app stops when you disconnect | You weren't inside tmux (no green bar at the bottom). Do 8A from the start, beginning with `tmux new -s app`. |
+| A list pops up after `Ctrl+B` | You pressed Shift+D. Press `q`, then `Ctrl+B` and lowercase `d`. |
+| `[sim.live] POST failed (HTTP Error 409: Conflict)` and `event(s) failed to post` | The database wasn't wiped before this run. Stop the run (9C), then do 9A again from the wipe step. |
+| `[sim.live] Cannot reach http://localhost:8000/api/health` | The app isn't running. Start it (Part 8), then start live mode again. |
+| `duplicate session: sim` | A live run session already exists. Use `tmux attach -t sim` to see it. |
+| `bench.reserveRace` shows `other` above 0, or the app window says `Too many open files` | The app ran out of connections. `tmux attach -t app`, press `Ctrl+C`, run `ulimit -n 4096`, start the app again (8C), then rerun 10A. |
+| `API health check failed` or `The API reports dbOk false` from a benchmark | The app isn't running or can't reach the database. Fix that first (Part 8), then rerun 10A. |
+| `git pull` says `untracked working tree files would be overwritten` and names `results/benchmark.json` | Run `mv results/benchmark.json ~/benchmark-backup.json`, then `git pull` again. |
+| Laptop tunnel says `bind: Address already in use` | Something on your laptop already uses port 8000. Use `-L 8001:localhost:8000` and open http://localhost:8001 instead. |
+| Browser says it can't connect to localhost:8000 | The tunnel terminal was closed or disconnected. Run the `ssh -L ...` command again. |
 | Anything else | Screenshot it and send it to Neil. |
