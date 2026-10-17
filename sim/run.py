@@ -60,6 +60,12 @@ def run(seeds: list[int]) -> dict:
     assumptions = _loadJson("shared/assumptions.json", _DEFAULT_ASSUMPTIONS)
     hospitals = _loadJson("shared/hospitals.json", _DEFAULT_HOSPITALS)
 
+    # Single-seed run (seed=42) for CONTRACT §7 backward-compatible keys
+    print(f"[sim.run] Running canonical seed {canonicalSeed}...")
+    canonicalScenario = generateScenario(assumptions, hospitals, canonicalSeed)
+    canonicalNoSharing = runSimulation(canonicalScenario, "noSharing", canonicalSeed)
+    canonicalExchange = runSimulation(canonicalScenario, "exchange", canonicalSeed)
+
     print(f"[sim.run] Running {len(seeds)} seeds: {seeds}")
     multiResult = runMultiSeed(assumptions, hospitals, seeds)
 
@@ -71,6 +77,11 @@ def run(seeds: list[int]) -> dict:
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
+        # CONTRACT §7 original keys (kept for dashboard / API backward compat)
+        "seed": canonicalSeed,
+        "noSharing": canonicalNoSharing,
+        "exchange": canonicalExchange,
+        # Multi-seed keys (added at +16h milestone)
         "seeds": multiResult["seeds"],
         "statistics": statistics,
         "stressScenarios": stressResult,

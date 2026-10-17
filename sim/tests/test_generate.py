@@ -2,13 +2,13 @@
 
 import sys
 import pathlib
+import unittest
 from datetime import datetime, timezone
 
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 
 from sim.generate import generateScenario
 
-# Minimal fixture matching CONTRACT §4 shapes
 ASSUMPTIONS = {
     "simDays": 10,
     "baselineWasteRate": 0.048,
@@ -36,113 +36,69 @@ HOSPITALS = [
 SEED = 42
 
 
-def _getScenario():
-    return generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+class TestGenerateScenario(unittest.TestCase):
 
+    def test_reproducible(self):
+        s1 = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+        s2 = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+        self.assertEqual(s1["deliveries"], s2["deliveries"])
+        self.assertEqual(s1["demand"], s2["demand"])
 
-def test_reproducible():
-    s1 = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
-    s2 = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
-    assert s1["deliveries"] == s2["deliveries"]
-    assert s1["demand"] == s2["demand"]
+    def test_different_seeds_differ(self):
+        s1 = generateScenario(ASSUMPTIONS, HOSPITALS, seed=1)
+        s2 = generateScenario(ASSUMPTIONS, HOSPITALS, seed=2)
+        self.assertNotEqual(s1["deliveries"], s2["deliveries"])
 
+    def test_delivery_count(self):
+        scenario = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+        self.assertGreater(len(scenario["deliveries"]), 0)
 
-def test_different_seeds_differ():
-    s1 = generateScenario(ASSUMPTIONS, HOSPITALS, seed=1)
-    s2 = generateScenario(ASSUMPTIONS, HOSPITALS, seed=2)
-    assert s1["deliveries"] != s2["deliveries"]
+    def test_unit_keys(self):
+        scenario = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+        required = {"unitId", "bloodGroup", "collectedAt", "expiresAt", "hospitalId", "status", "deliveredAt"}
+        for unit in scenario["deliveries"]:
+            self.assertEqual(required, set(unit.keys()), f"Bad keys: {set(unit.keys())}")
+            self.assertEqual(unit["status"], "available")
+            self.assertIn(unit["bloodGroup"], ASSUMPTIONS["bloodGroupMix"])
 
+    def test_shelf_life_math(self):
+        scenario = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+        for unit in scenario["deliveries"]:
+            collected = datetime.strptime(unit["collectedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            expires = datetime.strptime(unit["expiresAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            self.assertEqual((expires - collected).days, 7, f"Unit {unit['unitId']}: shelf life != 7")
 
-def test_delivery_count():
-    scenario = _getScenario()
-    deliveries = scenario["deliveries"]
-    # Deliveries come from Poisson draws per hospital per day per blood group.
-    # Expected total = simDays * hospitals * dailyDemandMean * bloodGroups_weighted
-    # Just assert there's a reasonable non-zero number of deliveries.
-    assert len(deliveries) > 0
-
-
-def test_unit_keys():
-    scenario = _getScenario()
-    # CONTRACT Unit shape + sim-internal deliveredAt field (stripped before API storage)
-    required = {"unitId", "bloodGroup", "collectedAt", "expiresAt", "hospitalId", "status", "deliveredAt"}
-    for unit in scenario["deliveries"]:
-        assert required == set(unit.keys()), f"Bad keys: {set(unit.keys())}"
-        assert unit["status"] == "available"
-        assert unit["bloodGroup"] in ASSUMPTIONS["bloodGroupMix"]
-
-
-def test_shelf_life_math():
-    """expiresAt - collectedAt must equal exactly 7 days for every unit."""
-    scenario = _getScenario()
-    for unit in scenario["deliveries"]:
-        collected = datetime.strptime(unit["collectedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        expires = datetime.strptime(unit["expiresAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        diff_days = (expires - collected).days
-        assert diff_days == 7, f"Unit {unit['unitId']}: shelf life {diff_days} != 7"
-
-
-def test_remaining_shelf_life_on_arrival():
-    """On arrival (deliveredAt = dayStart), remaining days must be in [min, max]."""
-    from datetime import timedelta
-    scenario = _getScenario()
-    simStart = datetime(2026, 1, 5, 0, 0, 0, tzinfo=timezone.utc)
-    minLeft = ASSUMPTIONS["remainingShelfLifeOnArrivalDays"]["min"]
-    maxLeft = ASSUMPTIONS["remainingShelfLifeOnArrivalDays"]["max"]
-    for unit in scenario["deliveries"]:
-        expires = datetime.strptime(unit["expiresAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        # deliveredAt is the dayStart for that unit's hospital/day
-        # We can't recover it directly, but remaining = (expiresAt - collectedAt) - (deliveredAt - collectedAt)
-        # = 7 - (7 - remaining) = remaining. Check via expiresAt - simDay.
-        # Instead: remaining = expiresAt - deliveredAt; deliveredAt is midnight of the delivery day.
-        # We can bound: expiresAt must be between simStart + minLeft and simStart + simDays + maxLeft
-        collected = datetime.strptime(unit["collectedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        # remaining = expiresAt - deliveredAt. deliveredAt >= simStart and <= simStart + simDays - 1.
-        # So remaining = (expires - collected) - (collected_offset) -- use the formula directly.
-        # remaining days on arrival = expires - dayStart (in days)
-        # dayStart = collected + (7 - remaining), so expires - dayStart = remaining
-        # We invert: collected = dayStart - (7 - remaining)
-        # => dayStart = collected + 7 - remaining = expires - remaining
-        # => remaining = expires - dayStart
-        # We can't recover dayStart, so just check that expiresAt - collectedAt == 7 (done above)
-        # and that collected is not before simStart - 7 days (sanity).
+    def test_remaining_shelf_life_on_arrival(self):
+        from datetime import timedelta
+        scenario = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+        simStart = datetime(2026, 1, 5, 0, 0, 0, tzinfo=timezone.utc)
+        minLeft = ASSUMPTIONS["remainingShelfLifeOnArrivalDays"]["min"]
         earliest_possible_collected = simStart - timedelta(days=7 - minLeft)
-        assert collected >= earliest_possible_collected, \
-            f"Unit {unit['unitId']} collected too early: {unit['collectedAt']}"
+        for unit in scenario["deliveries"]:
+            collected = datetime.strptime(unit["collectedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            self.assertGreaterEqual(collected, earliest_possible_collected,
+                                    f"Unit {unit['unitId']} collected too early")
 
+    def test_blood_group_distribution(self):
+        big = generateScenario({**ASSUMPTIONS, "simDays": 90}, HOSPITALS, SEED)
+        totals: dict = {}
+        for unit in big["deliveries"]:
+            bg = unit["bloodGroup"]
+            totals[bg] = totals.get(bg, 0) + 1
+        grand = sum(totals.values())
+        for bg, expected_frac in ASSUMPTIONS["bloodGroupMix"].items():
+            actual_frac = totals.get(bg, 0) / grand
+            self.assertLess(abs(actual_frac - expected_frac), 0.05,
+                            f"{bg}: expected {expected_frac:.3f}, got {actual_frac:.3f}")
 
-def test_blood_group_distribution():
-    """Blood group mix should match assumptions within 10% relative error."""
-    # Use a larger run for statistical stability
-    big = generateScenario({**ASSUMPTIONS, "simDays": 90}, HOSPITALS, SEED)
-    totals: dict = {}
-    for unit in big["deliveries"]:
-        bg = unit["bloodGroup"]
-        totals[bg] = totals.get(bg, 0) + 1
-    grand = sum(totals.values())
-    for bg, expected_frac in ASSUMPTIONS["bloodGroupMix"].items():
-        actual_frac = totals.get(bg, 0) / grand
-        # Allow 5 percentage points of absolute error (generous for a stub fixture)
-        assert abs(actual_frac - expected_frac) < 0.05, \
-            f"{bg}: expected {expected_frac:.3f}, got {actual_frac:.3f}"
-
-
-def test_demand_keys():
-    scenario = _getScenario()
-    required = {"date", "hospitalId", "bloodGroup", "units"}
-    for record in scenario["demand"]:
-        assert required == set(record.keys())
-        assert record["units"] > 0
-        assert record["bloodGroup"] in ASSUMPTIONS["bloodGroupMix"]
+    def test_demand_keys(self):
+        scenario = generateScenario(ASSUMPTIONS, HOSPITALS, SEED)
+        required = {"date", "hospitalId", "bloodGroup", "units"}
+        for record in scenario["demand"]:
+            self.assertEqual(required, set(record.keys()))
+            self.assertGreater(record["units"], 0)
+            self.assertIn(record["bloodGroup"], ASSUMPTIONS["bloodGroupMix"])
 
 
 if __name__ == "__main__":
-    test_reproducible()
-    test_different_seeds_differ()
-    test_delivery_count()
-    test_unit_keys()
-    test_shelf_life_math()
-    test_remaining_shelf_life_on_arrival()
-    test_blood_group_distribution()
-    test_demand_keys()
-    print("All tests passed.")
+    unittest.main()
