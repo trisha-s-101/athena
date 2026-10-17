@@ -32,20 +32,17 @@ class StubApiTest(ServerTestCase):
 
     def testDatabaseEndpointsReturn503WithoutDatabase(self):
         for method, path, body in [("GET", "/hospitals", None), ("GET", "/stock", None), ("GET", "/metrics", None),
+                                   ("GET", "/recommendations", None), ("GET", "/events?limit=5", None),
+                                   ("POST", "/emergency", {"hospitalId": "H05", "bloodGroup": "O-", "unitsNeeded": 2}),
                                    ("POST", "/reservations", {"unitId": "U000123", "toHospitalId": "H01"}),
                                    ("POST", "/feed/events", {"type": "clock", "simTime": "2026-01-05T14:00:00Z"})]:
             with self.subTest(path=path):
                 self.assertEqual(self.request(method, path, body), (503, {"error": "databaseUnavailable"}))
 
-    def testEmergency(self):
-        status, body = self.request("POST", "/emergency", {"hospitalId": "H05", "bloodGroup": "O-", "unitsNeeded": 2})
+    def testSimulationResultsNeedNoDatabase(self):
+        status, body = self.request("GET", "/simulation/results")
         self.assertEqual(status, 200)
-        self.assertEqual(body[0]["rank"], 1)
-
-    def testGetEndpoints(self):
-        for path in ["/recommendations", "/events?limit=5", "/simulation/results"]:
-            with self.subTest(path=path):
-                self.assertEqual(self.request("GET", path)[0], 200)
+        self.assertIn("generatedAt", body)
 
     def testBadRequestsUseErrorShape(self):
         self.assertEqual(self.request("POST", "/feed/events", {"type": "teleport"}), (400, {"error": "invalidRequest"}))
