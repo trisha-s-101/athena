@@ -103,9 +103,10 @@ class TestEventStream(unittest.TestCase):
         counts = streamScenario(scenario, "http://unused", FAST,
                                 policyName="exchange", dryRun=True)
         result = runSimulation(scenario, "exchange", SEED)
-        self.assertEqual(counts["delivery"], result["unitsDelivered"])
-        self.assertEqual(counts["transfusion"], result["unitsTransfused"])
-        self.assertEqual(counts["expiry"], result["unitsWasted"])
+        # A short scenario can legitimately have zero of a given event type.
+        self.assertEqual(counts.get("delivery", 0), result["unitsDelivered"])
+        self.assertEqual(counts.get("transfusion", 0), result["unitsTransfused"])
+        self.assertEqual(counts.get("expiry", 0), result["unitsWasted"])
 
     def test_no_sharing_policy_streams(self):
         counts = streamScenario(_scenario(), "http://unused", FAST,
