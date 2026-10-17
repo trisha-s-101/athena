@@ -357,6 +357,54 @@ Press `Ctrl+C`. **Expect:** your prompt comes back. The data stays in the databa
 
 ---
 
+## Part 10: Running the benchmarks (only when Neil asks)
+
+These produce the mainframe numbers for the pitch: 1,000 people trying to reserve the same unit at the same moment (exactly one must succeed), and how fast each part of the app answers. They take about two minutes and add test data, so the database is wiped before and after.
+
+The app must be running (Part 8), and live mode must be **stopped** (9C).
+
+### 10A: Run them
+
+In any window connected to the instance (tmux isn't needed, as long as you stay connected until they finish):
+
+```bash
+source ~/venv/bin/activate
+source ~/plateletExchange.env
+cd ~/plateletExchange
+ulimit -n 4096
+python -m db.seed --reset
+```
+**Expect:** `Reset and seeded: 10 hospitals, 90 travel times`. (`ulimit -n 4096` lets this window hold 1,000 connections open at once. It prints nothing.)
+
+The reservation race:
+
+```bash
+python -m bench.reserveRace
+```
+**Expect:** `arch s390x: 1000 concurrent reservations -> 1 accepted, 999 conflicts, 0 other`, then a line starting `[bench.reserveRace] PASSED`. If it says `FAILED`, **stop and send Neil the output.**
+
+The speed test:
+
+```bash
+python -m bench.latency
+```
+**Expect:** one line per endpoint, each ending in `errors 0`, then `Wrote .../results/benchmark.json`.
+
+### 10B: Send Neil the results
+
+```bash
+cat results/benchmark.json
+```
+Copy everything it prints and send it to Neil. It contains only timings, no passwords. The dashboard's benchmark panel also reads it straight from the app.
+
+Then wipe the test data:
+
+```bash
+python -m db.seed --reset
+```
+
+---
+
 ## Troubleshooting
 
 | What you see | What to do |
@@ -378,6 +426,9 @@ Press `Ctrl+C`. **Expect:** your prompt comes back. The data stays in the databa
 | `[sim.live] POST failed (HTTP Error 409: Conflict)` and `event(s) failed to post` | The database wasn't wiped before this run. Stop the run (9C), then do 9A again from the wipe step. |
 | `[sim.live] Cannot reach http://localhost:8000/api/health` | The app isn't running. Start it (Part 8), then start live mode again. |
 | `duplicate session: sim` | A live run session already exists. Use `tmux attach -t sim` to see it. |
+| `bench.reserveRace` shows `other` above 0, or the app window says `Too many open files` | The app ran out of connections. `tmux attach -t app`, press `Ctrl+C`, run `ulimit -n 4096`, start the app again (8C), then rerun 10A. |
+| `API health check failed` or `The API reports dbOk false` from a benchmark | The app isn't running or can't reach the database. Fix that first (Part 8), then rerun 10A. |
+| `git pull` says `untracked working tree files would be overwritten` and names `results/benchmark.json` | Run `mv results/benchmark.json ~/benchmark-backup.json`, then `git pull` again. |
 | Laptop tunnel says `bind: Address already in use` | Something on your laptop already uses port 8000. Use `-L 8001:localhost:8000` and open http://localhost:8001 instead. |
 | Browser says it can't connect to localhost:8000 | The tunnel terminal was closed or disconnected. Run the `ssh -L ...` command again. |
 | Anything else | Screenshot it and send it to Neil. |

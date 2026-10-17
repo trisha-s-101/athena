@@ -1,7 +1,7 @@
 """Platelet exchange HTTP API (CONTRACT.md section 8).
 
-Every endpoint reads Postgres except /simulation/results, which serves results/comparison.json
-(or the contract's example before the sim has written one). /recommendations and /emergency
+Every endpoint reads Postgres except /simulation/results and /benchmark/results, which serve
+results/comparison.json and results/benchmark.json. /recommendations and /emergency
 pass current stock to the engine (contract section 6).
 
 Run from the repo root with DATABASE_URL set: uvicorn api.main:app --host 0.0.0.0 --port 8000
@@ -28,6 +28,7 @@ from api.models import EmergencyRequest, FeedEvent, ReservationRequest
 repoRoot = Path(__file__).resolve().parent.parent
 webDir = repoRoot / "web"
 comparisonPath = repoRoot / "results" / "comparison.json"
+benchmarkPath = repoRoot / "results" / "benchmark.json"
 
 httpErrorCodes = {404: "notFound", 405: "methodNotAllowed"}
 activeStatuses = ("available", "reserved", "inTransit")
@@ -282,6 +283,14 @@ def getSimulationResults():
     if comparisonPath.exists():
         return json.loads(comparisonPath.read_text())
     return examples.exampleComparison
+
+
+@router.get("/benchmark/results")
+def getBenchmarkResults():
+    """Written by bench/reserveRace.py and bench/latency.py on the instance."""
+    if not benchmarkPath.exists():
+        raise ApiError(404, "benchmarkNotFound")
+    return json.loads(benchmarkPath.read_text())
 
 
 def recordDelivery(cursor, event, simTime: str) -> None:

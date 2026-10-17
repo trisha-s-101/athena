@@ -1,7 +1,12 @@
-# Platelet Exchange: Team Contract (v1.1)
+# Platelet Exchange: Team Contract (v1.2)
 
 **This file is the source of truth.** If your code disagrees with it, your code is wrong.
 Only Neil changes this file. Every change bumps the version number and gets announced in the group chat.
+
+**Changes in v1.2** (everything here describes code already on `main`):
+- §7: `comparison.json` gains multi-seed `seeds`, `statistics` and `stressScenarios` keys alongside the original ones. `sim.live` flags documented.
+- §8: every error code listed; new `GET /benchmark/results`; `/emergency` returns every compatible source; `/events` leaves out clock ticks; how sim time, `/metrics` and `/recommendations` are computed.
+- §10: team docs live in `shared/`; `results/benchmark.json` shape.
 
 ---
 
@@ -175,9 +180,20 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
 ```
 
 Commands:
-- `python -m sim.run --days 90 --seed 42` writes `results/comparison.json`:
-  `{"generatedAt": "...", "seed": 42, "noSharing": SimResult, "exchange": SimResult}`
-- `python -m sim.live --api http://localhost:8000 --speed 60` (1 sim hour per real minute) streams events to `POST /api/feed/events`.
+- `python -m sim.run [--seeds 1,2,...,10] [--seed N] [--days 90]` writes `results/comparison.json`:
+  ```jsonc
+  {"generatedAt": "...",
+   "seed": 42, "noSharing": SimResult, "exchange": SimResult,        // one canonical run (seed 42)
+   "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],                          // multi-seed runs, for error bars
+   "statistics": {
+     "noSharing": {"wasteRate": Stats, "shortageEvents": Stats, "transfers": 0},
+     "exchange":  {"wasteRate": Stats, "shortageEvents": Stats, "transfers": Stats}},
+   "stressScenarios": {
+     "demandSurge": {"description": "...", "noSharing": SimResult, "exchange": SimResult},
+     "supplyDip":   {"description": "...", "noSharing": SimResult, "exchange": SimResult}}}
+  // Stats = {"mean": 0.031, "stdDev": 0.004, "min": 0.025, "max": 0.038}
+  ```
+- `python -m sim.live --api http://localhost:8000 --speed 60 [--seed 42] [--days 90] [--policy noSharing] [--dryRun]` streams one scenario's feed events to `POST /api/feed/events`. `--speed` is a time multiplier: 60 means 1 sim hour per real minute. The default policy is `noSharing`, because the feed has no event for a unit changing hospital; in live mode, transfers come from the dashboard reserving through the API. Wipe the database (`python -m db.seed --reset`) before every live run, or the replayed units are rejected as duplicates.
 
 Within a hospital, units are issued oldest first (FIFO) in both policies, so the only difference measured is sharing.
 
@@ -193,15 +209,38 @@ Within a hospital, units are issued oldest first (FIFO) in both policies, so the
 | GET | `/recommendations` | | `[Transfer]` (engine run on current DB stock) |
 | POST | `/reservations` | `{"unitId": "U000123", "toHospitalId": "H01"}` | **201** `{"reservationId": "R000001", "unitId": "U000123", "fromHospitalId": "H03", "toHospitalId": "H01", "status": "accepted", "createdAt": "..."}` or **409** `{"error": "unitNotAvailable"}` |
 | POST | `/reservations/{reservationId}/complete` | | **200** reservation with `"status": "completed"`; the unit moves to `toHospitalId` and is `available` again |
-| POST | `/emergency` | EmergencyRequest | `[EmergencySource]` |
+| POST | `/emergency` | EmergencyRequest | `[EmergencySource]`: every compatible available unit at other hospitals, best first, not only `unitsNeeded` of them (so a lost reservation race has fallbacks) |
 | GET | `/metrics` | | `{"simTime": "...", "unitsAvailable": 140, "expiringIn24h": 18, "wastedToday": 2, "shortagesToday": 0, "transfersToday": 6, "wasteRate": 0.031}` |
-| GET | `/events?limit=50` | | `[{"eventId": "E000001", "type": "delivery", "unitId": "U000123", "hospitalId": "H03", "at": "...", "detail": "..."}]` newest first |
-| GET | `/simulation/results` | | contents of `results/comparison.json` |
+| GET | `/events?limit=50` | `limit` 1–500 | `[{"eventId": "E000001", "type": "delivery", "unitId": "U000123", "hospitalId": "H03", "at": "...", "detail": "..."}]` newest first, without `clock` events. `unitId` or `hospitalId` is `null` when the event has none |
+| GET | `/simulation/results` | | contents of `results/comparison.json` (§7) |
+| GET | `/benchmark/results` | | contents of `results/benchmark.json` (§10), or **404** `{"error": "benchmarkNotFound"}` before the benchmarks have run |
 | POST | `/feed/events` | `{"type": "delivery", "unit": Unit}` / `{"type": "transfusion", "unitId": "..."}` / `{"type": "expiry", "unitId": "..."}` / `{"type": "demandUnmet", "hospitalId": "...", "bloodGroup": "...", "units": 1}` / `{"type": "clock", "simTime": "..."}` | **202** `{"accepted": true}` |
 
-Errors are always `{"error": "camelCaseCode"}` with a 4xx status.
+Errors are always `{"error": "camelCaseCode"}`, with these codes:
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `invalidRequest` | The body or query doesn't match the shapes above (including an unparseable time) |
+| 400 | `unknownHospital` | A delivery, reservation, emergency or `demandUnmet` names a hospital that doesn't exist |
+| 400 | `sameHospital` | A reservation's `toHospitalId` is the hospital the unit is already at |
+| 404 | `notFound` | No such endpoint |
+| 404 | `unitNotFound` | A transfusion or expiry names a unit the API has never seen |
+| 404 | `reservationNotFound` | Completing a reservation that doesn't exist |
+| 404 | `benchmarkNotFound` | `/benchmark/results` before `results/benchmark.json` exists |
+| 405 | `methodNotAllowed` | Wrong HTTP method for the path |
+| 409 | `unitNotAvailable` | Reserving a unit that isn't `available`; completing a reservation whose unit was transfused or expired meanwhile; a transfusion or expiry for a unit already transfused or expired |
+| 409 | `unitAlreadyExists` | A delivery for a `unitId` the API already has |
+| 503 | `databaseUnavailable` | Postgres can't be reached. The only 5xx; `/health` still answers, with `"dbOk": false` |
 
 **Reservation correctness rule:** reserving is a single conditional update (`... SET status = 'reserved' WHERE unit_id = $1 AND status = 'available'`). Zero rows affected means 409. Backed by a partial unique index allowing one active reservation per unit.
+
+**How the API computes things:**
+- **Sim time** is the `simTime` of the latest `clock` feed event, or `2026-01-05T00:00:00Z` before the first one. Every event, `createdAt`, "today" and "next 24h" uses sim time, never the wall clock.
+- **Events logged:** `delivery`, `transfusion`, `expiry`, `demandUnmet` and `clock` from the feed, plus `reservation` (unit reserved) and `transfer` (reservation completed) from the API.
+- **Reservations:** a reserved unit can still be transfused or expire through the feed; completing its reservation then returns 409. Completing an already completed reservation returns 200 with the same body. The `inTransit` status is never set: completing moves a unit straight from `reserved` to `available` at the destination.
+- **`/metrics`:** `unitsAvailable` and `expiringIn24h` count `available` units. `wastedToday`, `shortagesToday` and `transfersToday` count `expiry`, `demandUnmet` and `transfer` events on the current sim day (UTC). `wasteRate` is all `expiry` events divided by all `delivery` events.
+- **`/recommendations`:** demand history is the last 28 complete sim days of transfusions (counted under the transfused unit's blood group) plus `demandUnmet` units. It is passed to `engine.forecastDemand`, and the forecast goes to `engine.recommendTransfers` with available stock, `travel_times` and `shared/compatibility.json`. No history (the first sim day) means no recommendations.
+- `hoursToExpiry` in `/recommendations` and `/emergency` is rounded to 1 decimal place.
 
 ---
 
@@ -216,17 +255,29 @@ Tables: `hospitals`, `travel_times`, `units`, `reservations`, `events`.
 
 ```
 platelet-exchange/
-  CONTRACT.md   AGENTS.md   CLAUDE.md (copy of AGENTS.md)   README.md
-  shared/       hospitals.json  travelTimes.json  compatibility.json  assumptions.json
+  CLAUDE.md (copy of AGENTS.md)   README.md
+  shared/       CONTRACT.md  AGENTS.md  BRIEFS.md  INSTANCE_SETUP.md
+                hospitals.json  travelTimes.json  compatibility.json  assumptions.json
   db/           schema.sql  seed.py
   api/          (FastAPI app)
   engine/       __init__.py  forecast.py  transfers.py  emergency.py  tests/
   sim/          generate.py  simulate.py  run.py  live.py  tests/
   web/          index.html  app.js  styles.css  mock/*.json
-  bench/        reserveRace.py  latency.py
+  bench/        reserveRace.py  latency.py  tests/
   results/      comparison.json  benchmark.json
   docs/         assumptions.md  validation.md  pitch/
 ```
+
+`results/benchmark.json` (written by `bench/`, served by `GET /api/benchmark/results`). Each script replaces only its own section:
+```jsonc
+{"generatedAt": "...", "arch": "s390x",          // arch reported by the API's /health
+ "reserveRace": {"generatedAt": "...", "attempts": 1000, "accepted": 1, "conflicts": 999, "otherErrors": 0,
+                 "passed": true, "durationSeconds": 1.8, "p50Ms": 610.2, "p99Ms": 1490.7},
+ "latency": {"generatedAt": "...", "concurrency": 20, "requestsPerEndpoint": 500,
+             "endpoints": [{"name": "GET /api/hospitals", "requests": 500, "errors": 0,
+                            "throughputPerSecond": 410.5, "p50Ms": 41.2, "p99Ms": 120.9}]}}
+```
+`passed` is true only when exactly one of the concurrent reservations got 201 and every other one got 409.
 
 - One branch per person (`neil/api`, `sim`, `engine`, `web`, `docs`). Small pull requests into `main`, merged by Neil.
 - **`main` must always run.** Before merging: the module's tests pass and the stub-or-real code matches this contract.
