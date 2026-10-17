@@ -2,11 +2,11 @@
 sim/run.py  --  CLI entry point for the offline simulation (CONTRACT §7).
 
 Usage:
-    python -m sim.run --days 90 --seed 42
+    python -m sim.run [--seed 42] [--seeds 1,2,3,...,10] [--days 90]
 
-Loads shared/assumptions.json and shared/hospitals.json, generates a scenario,
-runs both policies, and writes results/comparison.json.
-Falls back to built-in defaults if the shared files are not yet committed.
+Loads shared/assumptions.json and shared/hospitals.json, runs 10 seeds plus
+stress scenarios, and writes results/comparison.json in the +16h shape.
+Falls back to built-in defaults if shared files are not yet committed.
 """
 
 import argparse
@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 
 from sim.generate import generateScenario
 from sim.simulate import runSimulation
+from sim.multirun import runMultiSeed, runStressScenarios
 
 _REPO_ROOT = pathlib.Path(__file__).parents[1]
 _RESULTS_PATH = _REPO_ROOT / "results" / "comparison.json"
@@ -44,6 +45,8 @@ _DEFAULT_HOSPITALS = [
     )
 ]
 
+_DEFAULT_SEEDS = list(range(1, 11))  # seeds 1–10
+
 
 def _loadJson(relPath: str, default):
     p = _REPO_ROOT / relPath
@@ -53,49 +56,57 @@ def _loadJson(relPath: str, default):
     return default
 
 
-def run(seed: int) -> dict:
+def run(seeds: list[int]) -> dict:
     assumptions = _loadJson("shared/assumptions.json", _DEFAULT_ASSUMPTIONS)
     hospitals = _loadJson("shared/hospitals.json", _DEFAULT_HOSPITALS)
 
-    # Override simDays only if shared file is missing; respect the file's value.
-    simDays = assumptions["simDays"]
+    print(f"[sim.run] Running {len(seeds)} seeds: {seeds}")
+    multiResult = runMultiSeed(assumptions, hospitals, seeds)
 
-    print(f"[sim.run] Generating scenario: {simDays} days, seed={seed}, {len(hospitals)} hospitals")
-    scenario = generateScenario(assumptions, hospitals, seed)
-    print(f"[sim.run] {len(scenario['deliveries'])} deliveries, {len(scenario['demand'])} demand records")
+    print("[sim.run] Running stress scenarios (seed=42)...")
+    stressResult = runStressScenarios(assumptions, hospitals, seed=42)
 
-    print("[sim.run] Running noSharing policy...")
-    noSharing = runSimulation(scenario, "noSharing", seed)
-    print(f"[sim.run]   wasteRate={noSharing['wasteRate']:.4f}  shortages={noSharing['shortageEvents']}")
-
-    print("[sim.run] Running exchange policy...")
-    exchange = runSimulation(scenario, "exchange", seed)
-    print(f"[sim.run]   wasteRate={exchange['wasteRate']:.4f}  shortages={exchange['shortageEvents']}  transfers={exchange['transfers']}")
+    # Strip internal _rawResults before writing (too large for comparison.json)
+    statistics = multiResult["statistics"]
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "seed": seed,
-        "noSharing": noSharing,
-        "exchange": exchange,
+        "seeds": multiResult["seeds"],
+        "statistics": statistics,
+        "stressScenarios": stressResult,
     }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run platelet exchange simulation")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Single seed (overrides --seeds)")
+    parser.add_argument("--seeds", type=str, default=None,
+                        help="Comma-separated list of seeds (default: 1-10)")
     parser.add_argument("--days", type=int, default=None,
                         help="Override simDays from assumptions.json")
-    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    # --days override: patch the assumptions file's value if supplied
     if args.days is not None:
         _DEFAULT_ASSUMPTIONS["simDays"] = args.days
 
-    result = run(args.seed)
+    if args.seed is not None:
+        seeds = [args.seed]
+    elif args.seeds is not None:
+        seeds = [int(s.strip()) for s in args.seeds.split(",")]
+    else:
+        seeds = _DEFAULT_SEEDS
+
+    result = run(seeds)
 
     _RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     _RESULTS_PATH.write_text(json.dumps(result, indent=2))
     print(f"[sim.run] Wrote {_RESULTS_PATH}")
+
+    ns = result["statistics"]["noSharing"]
+    ex = result["statistics"]["exchange"]
+    print(f"[sim.run] noSharing wasteRate: mean={ns['wasteRate']['mean']:.4f}  stdDev={ns['wasteRate']['stdDev']:.4f}")
+    print(f"[sim.run] exchange  wasteRate: mean={ex['wasteRate']['mean']:.4f}  stdDev={ex['wasteRate']['stdDev']:.4f}")
 
 
 if __name__ == "__main__":

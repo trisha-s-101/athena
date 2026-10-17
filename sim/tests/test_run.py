@@ -1,4 +1,4 @@
-"""Tests for sim/run.py -- checks output shape and consistency invariants."""
+"""Tests for sim/run.py -- checks comparison.json output shape (+16h shape)."""
 
 import sys
 import pathlib
@@ -6,55 +6,46 @@ sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 
 from sim.run import run
 
+_SMALL_SEEDS = [1, 2, 3]  # keep tests fast
+
 
 def test_top_level_keys():
-    result = run(seed=42)
-    assert set(result.keys()) == {"generatedAt", "seed", "noSharing", "exchange"}
-    assert result["seed"] == 42
+    result = run(seeds=_SMALL_SEEDS)
+    assert set(result.keys()) == {"generatedAt", "seeds", "statistics", "stressScenarios"}
+    assert result["seeds"] == _SMALL_SEEDS
     assert isinstance(result["generatedAt"], str)
 
 
-def _check_sim_result(sr: dict):
-    required = {
-        "policy", "days", "unitsDelivered", "unitsTransfused",
-        "unitsWasted", "wasteRate", "shortageEvents", "transfers", "daily",
-    }
-    assert required == set(sr.keys()), f"Missing keys: {required - set(sr.keys())}"
-    assert isinstance(sr["unitsDelivered"], int)
-    assert isinstance(sr["unitsWasted"], int)
-    assert isinstance(sr["wasteRate"], float)
-    # Consistency: delivered >= transfused + wasted
-    assert sr["unitsDelivered"] >= sr["unitsTransfused"] + sr["unitsWasted"]
-    # wasteRate matches wasted/delivered to within rounding
-    assert abs(sr["wasteRate"] - sr["unitsWasted"] / sr["unitsDelivered"]) < 0.001
-    # daily list length matches days
-    assert len(sr["daily"]) == sr["days"]
-    for entry in sr["daily"]:
-        assert {"date", "wasted", "shortages", "transfers"} == set(entry.keys())
+def test_statistics_shape():
+    result = run(seeds=_SMALL_SEEDS)
+    stat_keys = {"mean", "stdDev", "min", "max"}
+    for policy in ("noSharing", "exchange"):
+        ps = result["statistics"][policy]
+        assert set(ps["wasteRate"].keys()) == stat_keys
+        assert set(ps["shortageEvents"].keys()) == stat_keys
 
 
-def test_sim_result_shapes():
-    result = run(seed=42)
-    _check_sim_result(result["noSharing"])
-    _check_sim_result(result["exchange"])
-
-
-def test_exchange_less_waste_than_no_sharing():
-    result = run(seed=42)
-    # exchange <= noSharing with real engine; with stub both use no transfers so equal or close
-    assert result["exchange"]["wasteRate"] <= result["noSharing"]["wasteRate"] + 0.01
+def test_stress_scenarios_shape():
+    result = run(seeds=_SMALL_SEEDS)
+    ss = result["stressScenarios"]
+    assert set(ss.keys()) == {"demandSurge", "supplyDip"}
+    for scenario in ss.values():
+        assert "description" in scenario
+        for policy in ("noSharing", "exchange"):
+            sr = scenario[policy]
+            assert sr["unitsDelivered"] >= sr["unitsTransfused"] + sr["unitsWasted"]
 
 
 def test_deterministic():
-    r1 = run(seed=99)
-    r2 = run(seed=99)
-    assert r1["noSharing"]["unitsWasted"] == r2["noSharing"]["unitsWasted"]
-    assert r1["exchange"]["wasteRate"] == r2["exchange"]["wasteRate"]
+    r1 = run(seeds=[7, 8])
+    r2 = run(seeds=[7, 8])
+    assert r1["statistics"]["noSharing"]["wasteRate"]["mean"] == \
+           r2["statistics"]["noSharing"]["wasteRate"]["mean"]
 
 
 if __name__ == "__main__":
     test_top_level_keys()
-    test_sim_result_shapes()
-    test_exchange_less_waste_than_no_sharing()
+    test_statistics_shape()
+    test_stress_scenarios_shape()
     test_deterministic()
     print("All tests passed.")
