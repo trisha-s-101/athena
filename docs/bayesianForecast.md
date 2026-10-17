@@ -1,6 +1,6 @@
 # Experiment: a Bayesian demand forecaster
 
-**Branch:** `experiment/bayesianForecast`, a draft PR that isn't merged. Merging is Neil's decision.
+**Status:** merged into `main` with Neil's approval ([PR #17](https://github.com/trisha-s-101/athena/pull/17), from branch `experiment/bayesianForecast`). The instance runs it after the next INSTANCE_SETUP Part 8C deploy.
 
 **In one line:** replacing the per-pair weekday average with a partially pooled Bayesian model cuts forecast error by 6.5–8.2% (12% in the first four weeks). In the simulator, the exchange gets the same waste and shortages with about 14% fewer courier transfers. Nothing outside `engine/forecast.py` has to change.
 
@@ -99,7 +99,7 @@ It's worth merging if there's time before the feature freeze and the engine owne
 - fewer transfers for the same outcomes
 - no interface changes and a negligible speed cost
 
-If it's merged, it's one merge commit: reverting that commit and redeploying with INSTANCE_SETUP Part 8C restores the weekday average exactly. Before merging, close the draft PR to leave everything as it was.
+**To undo:** the change is one merge commit. Reverting it and redeploying with INSTANCE_SETUP Part 8C restores the weekday average exactly.
 
 **Pitch line:** "Our exchange forecasts demand with a Bayesian model that learns each hospital's pattern and borrows strength from similar hospitals where data is thin. In simulation it cut forecast error by about 7%, and 12% in the first month, and achieved the same waste and shortages with 14% fewer courier trips."
 
