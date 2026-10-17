@@ -118,16 +118,16 @@ chmod 600 ~/plateletExchange.env
 
 ```bash
 cd ~
-git clone https://github.com/OWNER/REPO.git plateletExchange
+git clone https://github.com/OWNER/REPO.git athena
 ```
 Replace `OWNER/REPO` with the repo's address (copy it from the green **Code** button on GitHub).
 
 **If it asks for a username and password** (private repo): the username is your GitHub username, but the password must be a **personal access token**, not your GitHub password. To make one: GitHub → your profile picture → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token → give it access to this repo with "Contents: Read-only" → copy the token and paste it as the password.
 
-**Expect:** `Cloning into 'plateletExchange'... done.`
+**Expect:** `Cloning into 'athena'... done.`
 
 ```bash
-ls ~/plateletExchange
+ls ~/athena
 ```
 **Expect:** you can see `CONTRACT.md` and the other team files.
 
@@ -164,7 +164,7 @@ uname: s390x
 OS: Ubuntu 24.04 (or what it said)
 Postgres: active
 Python check: allGood
-Repo cloned to: ~/plateletExchange
+Repo cloned to: ~/athena
 Port 8000 open: yes / no (use SSH tunnel)
 Problems: none / (describe)
 ```
@@ -198,7 +198,7 @@ Load the Python environment and the database password. These must be run **insid
 ```bash
 source ~/venv/bin/activate
 source ~/plateletExchange.env
-cd ~/plateletExchange
+cd ~/athena
 ```
 **Expect:** your prompt starts with `(venv)`.
 
@@ -223,9 +223,10 @@ python -m unittest discover api/tests
 ```
 **Expect:** the last line starts with `OK`, for example `OK (skipped=11)`. The number can change between versions. Skipped tests are normal: they need a test database that the instance doesn't have. If it says `FAILED`, stop and send Neil the output.
 
-Start the app:
+Start the app. `ulimit -n 4096` lets it hold enough connections open for the benchmarks in Part 10; it prints nothing:
 
 ```bash
+ulimit -n 4096
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 **Wait** until you see a line containing `Uvicorn running on http://127.0.0.1:8000`. It keeps running and doesn't return to the prompt. That's correct.
@@ -268,6 +269,12 @@ tmux attach -t app
 
 Press `Ctrl+C` to stop the app. **Expect:** your prompt comes back.
 
+If `results/benchmark.json` exists from a benchmark run, move it aside first (the repo now has its own copy, and `git pull` refuses to overwrite yours):
+
+```bash
+mv -f results/benchmark.json ~/benchmark-backup.json 2>/dev/null; true
+```
+
 Get the latest code on its own first, because it may ask for your token:
 
 ```bash
@@ -279,6 +286,7 @@ Then run these:
 ```bash
 python -m db.seed
 python -m unittest discover api/tests
+ulimit -n 4096
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 **Expect:** the same results as in 8A. `python -m db.seed` is safe to run every time: it only adds what's missing and never deletes live data.
@@ -319,7 +327,7 @@ tmux new -s sim
 ```bash
 source ~/venv/bin/activate
 source ~/plateletExchange.env
-cd ~/plateletExchange
+cd ~/athena
 ```
 
 **Wipe the database first, every time.** A new run replays the same units from the start, and the app rejects units it has already seen. This is safe while the app is running:
@@ -370,7 +378,7 @@ In any window connected to the instance (tmux isn't needed, as long as you stay 
 ```bash
 source ~/venv/bin/activate
 source ~/plateletExchange.env
-cd ~/plateletExchange
+cd ~/athena
 ulimit -n 4096
 python -m db.seed --reset
 ```
@@ -415,7 +423,7 @@ python -m db.seed --reset
 | `(venv)` disappeared from your prompt | You reconnected. Run `source ~/venv/bin/activate` again. |
 | `psql: ... password authentication failed` | The password was typed wrong. Ask Neil to help reset it. |
 | `DATABASE_URL is not set` from `db.seed`, or `"dbOk":false` | The password file wasn't loaded in this tmux session. `tmux attach -t app`, press `Ctrl+C`, run `source ~/plateletExchange.env`, then start the app again. |
-| `No module named 'api'` or `No module named 'db'` | You're in the wrong folder. Run `cd ~/plateletExchange` and try again. |
+| `No module named 'api'` or `No module named 'db'` | You're in the wrong folder. Run `cd ~/athena` and try again. |
 | `No module named 'fastapi'` (or `uvicorn`, `psycopg2`) | The Python environment isn't loaded. Run `source ~/venv/bin/activate` and try again. |
 | `address already in use` when starting the app | The app is already running in another session. Run `tmux attach -t app` instead of starting a new one. |
 | `duplicate session: app` | A session already exists. Use `tmux attach -t app` instead of `tmux new -s app`. |
