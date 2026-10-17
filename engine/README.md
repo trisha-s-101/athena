@@ -14,12 +14,28 @@ Run commands from the repository root using Python 3.12 or newer.
 
 ## Forecasting
 
-`forecastDemand(history, horizonDays=3)` averages daily demand separately for
-each hospital, recipient blood group, and weekday. Weekdays not represented in
-the history use the hospital/group's overall daily average. Duplicate records
-for a date sum; missing records between the first and last history dates count
-as zero. Results include only hospital/group pairs observed in history. Empty
-history returns `{}`; a zero horizon returns empty arrays for observed pairs.
+`forecastDemand(history, horizonDays=3)` is a partially pooled Bayesian
+(Poisson–Gamma) model. Each hospital/blood-group pair's daily demand is treated
+as Poisson, and its rate is estimated in two pooled steps, so pairs with thin
+history borrow strength from the rest of the region:
+
+1. **Pair rate**, shrunk toward the hospital's total daily demand split by the
+   region's blood-group mix (over the groups seen at that hospital).
+2. **Weekday rate**, shrunk toward that pair rate times the region's weekday
+   profile (for example, quieter weekends).
+
+How strongly each step pulls is learned from the history by the method of
+moments: the more pairs differ from the pooled pattern beyond Poisson noise, the
+weaker the pull. The last 28 days count fully, and older days fade with an
+8-week half-life. Tuning, the backtest against the previous forecaster and the
+simulator comparison are in `docs/bayesianForecast.md`. The previous per-pair
+weekday average is kept in `engine/weekdayForecast.py` for comparison only.
+
+Weekdays not represented in the history use the pair's overall rate. Duplicate
+records for a date sum; missing records between the first and last history dates
+count as zero. Results include only hospital/group pairs observed in history and
+don't depend on record order. Empty history returns `{}`; a zero horizon returns
+empty arrays for observed pairs.
 
 The interface has no clock argument. Consequently, forecast index 0 is the day
 after the latest history date. API and simulator callers should supply history
@@ -106,8 +122,9 @@ comparison results exist in this checkout yet. Waste and shortage improvements
 across simulation seeds remain to be measured jointly; the unit tests do not
 establish the team's simulation acceptance criterion.
 
-For Person 6's pitch: "We forecast each hospital's demand from its weekday
-history, protect units it is expected to need, and move surplus stock nearing
+For Person 6's pitch: "We forecast each hospital's demand with a Bayesian model
+that learns from its history and borrows strength from similar hospitals where
+data is thin, protect units it is expected to need, and move surplus stock nearing
 expiry to compatible hospitals with a predicted shortfall. Courier travel and
 shelf life constrain every recommendation, while emergency requests rank all
 compatible sources by preference, speed, and expiry."
