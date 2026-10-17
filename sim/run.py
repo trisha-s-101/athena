@@ -61,6 +61,7 @@ def run(seeds: list[int]) -> dict:
     hospitals = _loadJson("shared/hospitals.json", _DEFAULT_HOSPITALS)
 
     # Single-seed run (seed=42) for CONTRACT §7 backward-compatible keys
+    canonicalSeed = 42
     print(f"[sim.run] Running canonical seed {canonicalSeed}...")
     canonicalScenario = generateScenario(assumptions, hospitals, canonicalSeed)
     canonicalNoSharing = runSimulation(canonicalScenario, "noSharing", canonicalSeed)

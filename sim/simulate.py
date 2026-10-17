@@ -107,6 +107,15 @@ except Exception:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+# Event types the API accepts at POST /api/feed/events (CONTRACT §8).
+FEED_EVENT_TYPES = frozenset({"delivery", "transfusion", "expiry", "demandUnmet", "clock"})
+
+
+def _contractUnit(unit: dict) -> dict:
+    """Drop the sim-internal deliveredAt field, leaving a CONTRACT §5 Unit."""
+    return {k: v for k, v in unit.items() if k != "deliveredAt"}
+
+
 def _parseUtc(s: str) -> datetime:
     return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
@@ -142,11 +151,27 @@ def _buildDeliveryIndex(deliveries: list[dict]) -> dict:
 # Main simulation
 # ---------------------------------------------------------------------------
 
-def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
+def _inferSimDays(deliveries: list[dict]) -> int:
+    """Infer the horizon from deliveredAt dates (added by generate.py)."""
+    allDates = {u["deliveredAt"][:10] for u in deliveries if "deliveredAt" in u}
+    if not allDates:
+        return 90
+    from datetime import date
+    maxDate = max(date.fromisoformat(d) for d in allDates)
+    return (maxDate - _SIM_START.date()).days + 1
+
+
+def simulateEvents(scenario: dict, policyName: str, seed: int):
     """
-    Simulate platelet exchange over the scenario's time horizon.
-    policyName: "noSharing" | "exchange"
-    Returns a SimResult (CONTRACT §5).
+    Run the simulation and yield each event as it happens.
+
+    Yields CONTRACT §8 feed events ("clock", "delivery", "transfusion",
+    "expiry", "demandUnmet") interleaved with two sim-internal events:
+      {"type": "transfer", ...}        a dispatched engine recommendation
+      {"type": "dayEnd", "date": ...}  end-of-day marker
+
+    runSimulation aggregates this stream into a SimResult; sim.live filters it
+    down to the five contract types and POSTs them to the API.
     """
     if policyName not in ("noSharing", "exchange"):
         raise ValueError(f"Unknown policy: {policyName}")
@@ -154,18 +179,7 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
     deliveries: list[dict] = scenario["deliveries"]
     demand: list[dict] = scenario["demand"]
 
-    # Infer simDays from deliveredAt dates (added by generate.py)
-    allDates = set()
-    for unit in deliveries:
-        if "deliveredAt" in unit:
-            allDates.add(unit["deliveredAt"][:10])
-    if allDates:
-        from datetime import date
-        maxDate = max(date.fromisoformat(d) for d in allDates)
-        simDays = (maxDate - _SIM_START.date()).days + 1
-    else:
-        simDays = 90
-
+    simDays = _inferSimDays(deliveries)
     travelTimes = _loadTravelTimes()
     compatibility = _loadCompatibility()
 
@@ -178,15 +192,6 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
     # in-transit: list of {"arrivalTime": datetime, "unit": dict}
     inTransit: list[dict] = []
 
-    # accumulators
-    totalDelivered = 0
-    totalTransfused = 0
-    totalWasted = 0
-    totalShortages = 0
-    totalTransfers = 0
-
-    daily: list[dict] = []
-
     # history of demand records seen so far (for engine forecasts)
     demandHistory: list[dict] = []
 
@@ -194,13 +199,11 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
         dayStart = _SIM_START + timedelta(days=dayIndex)
         dateStr = dayStart.strftime("%Y-%m-%d")
 
-        dayWasted = 0
-        dayShortages = 0
-        dayTransfers = 0
-
         for stepIndex in range(_STEPS_PER_DAY):
             now = dayStart + timedelta(hours=stepIndex * _STEP_HOURS)
             nowIso = _isoUtc(now)
+
+            yield {"type": "clock", "simTime": nowIso}
 
             # 1. Deliver units (only at midnight, step 0)
             if stepIndex == 0:
@@ -210,7 +213,7 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
                         u = dict(unit)
                         u["status"] = "available"
                         inventory[hospitalId].append(u)
-                        totalDelivered += 1
+                        yield {"type": "delivery", "unit": _contractUnit(u)}
 
             # 2. Arrive in-transit units
             arrived = [t for t in inTransit if t["arrivalTime"] <= now]
@@ -227,14 +230,12 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
                         expiresAt = _parseUtc(unit["expiresAt"])
                         if now >= expiresAt:
                             unit["status"] = "expired"
-                            dayWasted += 1
-                            totalWasted += 1
+                            yield {"type": "expiry", "unitId": unit["unitId"]}
 
             # 4. Exchange only: run engine every 6h
             if policyName == "exchange":
-                # Strip sim-internal deliveredAt before handing to engine
                 availableStock = [
-                    {k: v for k, v in u.items() if k != "deliveredAt"}
+                    _contractUnit(u)
                     for units in inventory.values()
                     for u in units if u["status"] == "available"
                 ]
@@ -257,15 +258,19 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
                             transitUnit["hospitalId"] = toHId
                             arrivalTime = now + timedelta(minutes=travelMin)
                             inTransit.append({"arrivalTime": arrivalTime, "unit": transitUnit})
-                            dayTransfers += 1
-                            totalTransfers += 1
+                            yield {
+                                "type": "transfer",
+                                "unitId": unitId,
+                                "fromHospitalId": fromHId,
+                                "toHospitalId": toHId,
+                                "travelMinutes": travelMin,
+                            }
                             break
 
         # 5. Issue FIFO demand at end of day
         dayDemand = demandIdx.get(dateStr, {})
         for hospitalId, bgDemand in dayDemand.items():
             inv = inventory.get(hospitalId, [])
-            # Collect demand records for engine history
             for bloodGroup, unitsNeeded in bgDemand.items():
                 demandHistory.append({
                     "date": dateStr,
@@ -284,25 +289,66 @@ def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
 
                 for unit in available[:toTransfuse]:
                     unit["status"] = "transfused"
-                    totalTransfused += 1
+                    yield {"type": "transfusion", "unitId": unit["unitId"]}
 
                 if shortage > 0:
-                    dayShortages += shortage
-                    totalShortages += shortage
+                    yield {
+                        "type": "demandUnmet",
+                        "hospitalId": hospitalId,
+                        "bloodGroup": bloodGroup,
+                        "units": shortage,
+                    }
 
-        daily.append({
-            "date": dateStr,
-            "wasted": dayWasted,
-            "shortages": dayShortages,
-            "transfers": dayTransfers,
-        })
-        totalWasted += 0  # already accumulated inside step loop
+        yield {"type": "dayEnd", "date": dateStr}
+
+
+def runSimulation(scenario: dict, policyName: str, seed: int) -> dict:
+    """
+    Simulate platelet exchange over the scenario's time horizon.
+    policyName: "noSharing" | "exchange"
+    Returns a SimResult (CONTRACT §5).
+    """
+    totalDelivered = 0
+    totalTransfused = 0
+    totalWasted = 0
+    totalShortages = 0
+    totalTransfers = 0
+
+    dayWasted = 0
+    dayShortages = 0
+    dayTransfers = 0
+
+    daily: list[dict] = []
+
+    for event in simulateEvents(scenario, policyName, seed):
+        eventType = event["type"]
+        if eventType == "delivery":
+            totalDelivered += 1
+        elif eventType == "transfusion":
+            totalTransfused += 1
+        elif eventType == "expiry":
+            totalWasted += 1
+            dayWasted += 1
+        elif eventType == "demandUnmet":
+            totalShortages += event["units"]
+            dayShortages += event["units"]
+        elif eventType == "transfer":
+            totalTransfers += 1
+            dayTransfers += 1
+        elif eventType == "dayEnd":
+            daily.append({
+                "date": event["date"],
+                "wasted": dayWasted,
+                "shortages": dayShortages,
+                "transfers": dayTransfers,
+            })
+            dayWasted = dayShortages = dayTransfers = 0
 
     wasteRate = round(totalWasted / totalDelivered, 4) if totalDelivered > 0 else 0.0
 
     return {
         "policy": policyName,
-        "days": simDays,
+        "days": len(daily),
         "unitsDelivered": totalDelivered,
         "unitsTransfused": totalTransfused,
         "unitsWasted": totalWasted,
