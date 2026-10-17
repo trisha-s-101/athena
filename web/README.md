@@ -33,7 +33,7 @@ The emergency form uses `POST /api/emergency` and displays the engine's ranking 
 
 - The comparison view shows error bars (mean ± 1 standard deviation, with the range on hover) from the multi-seed `statistics` in `/api/simulation/results`, above the canonical seed-42 table and daily charts. Single-seed results show a note instead.
 - The benchmark panel reads `GET /api/benchmark/results` and says which machine produced the numbers. Before the benchmarks run, the API returns 404 `benchmarkNotFound` and the panel says so.
-- `mock/benchmark.json` holds a real benchmark run from a development laptop (arm64), labeled as such in the panel. `mock/comparison.json`'s multi-seed `statistics` block is synthetic, like the rest of the mock.
+- `mock/benchmark.json` is a copy of the real benchmark run on the IBM LinuxONE instance (s390x, `results/benchmark.json`), so mock mode and offline demos show the mainframe numbers. `mock/comparison.json`'s multi-seed `statistics` block is synthetic, like the rest of the mock.
 - Still open: reservation cards last only for the page session, because the contract has no list-reservations endpoint.
 
 ## Tests

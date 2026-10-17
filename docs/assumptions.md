@@ -9,8 +9,8 @@ What is synthetic in this prototype, and what each number rests on. This is the 
 | What | Detail |
 |---|---|
 | Hospitals | 10 real Greater Manchester hospitals (`shared/hospitals.json`): Manchester Royal Infirmary, Salford Royal, Wythenshawe, Royal Bolton, Royal Oldham, Fairfield General, Stepping Hill, Tameside General, Royal Albert Edward Infirmary (Wigan) and Rochdale Infirmary. Names and approximate coordinates are real. |
-| Reservation correctness | Measured, not assumed. 1,000 simultaneous reservations for one unit give exactly one success (`bench/reserveRace.py`; numbers in `results/benchmark.json` from the LinuxONE instance). |
-| Speed | Measured on the instance by `bench/latency.py`. |
+| Reservation correctness | Measured on IBM LinuxONE (s390x), 17 Oct 2026: 1,000 simultaneous reservations for one unit gave exactly 1 success and 999 safe rejections, with 0 errors (`bench/reserveRace.py`, `results/benchmark.json`). The race took 6.5 s because all 1,000 requests queue for one app process at the same instant. It shows correctness under contention, not speed. |
+| Speed | Measured on the instance by `bench/latency.py`, 20 requests in flight: about 100–120 requests/s per endpoint with 0 errors in 4,000 requests. Emergency sourcing p50 180 ms, p99 316 ms, well under the 1-second target. This measures the prototype (one Python process on a small instance), not IBM Z's capacity. |
 
 ## Synthetic or estimated
 

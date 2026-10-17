@@ -1,0 +1,86 @@
+{
+  "generatedAt": "2026-10-17T19:01:51Z",
+  "arch": "s390x",
+  "reserveRace": {
+    "generatedAt": "2026-10-17T19:00:44Z",
+    "attempts": 1000,
+    "accepted": 1,
+    "conflicts": 999,
+    "otherErrors": 0,
+    "passed": true,
+    "durationSeconds": 6.482,
+    "p50Ms": 3566.9,
+    "p99Ms": 6374.6
+  },
+  "latency": {
+    "generatedAt": "2026-10-17T19:01:51Z",
+    "concurrency": 20,
+    "requestsPerEndpoint": 500,
+    "endpoints": [
+      {
+        "name": "POST /api/feed/events (delivery)",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 119.6,
+        "p50Ms": 169.7,
+        "p99Ms": 310.3
+      },
+      {
+        "name": "POST /api/reservations",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 106.2,
+        "p50Ms": 186.3,
+        "p99Ms": 318.3
+      },
+      {
+        "name": "GET /api/hospitals",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 111.7,
+        "p50Ms": 178.9,
+        "p99Ms": 306.5
+      },
+      {
+        "name": "GET /api/stock",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 56.8,
+        "p50Ms": 342.7,
+        "p99Ms": 579.1
+      },
+      {
+        "name": "GET /api/metrics",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 104.6,
+        "p50Ms": 184.3,
+        "p99Ms": 372.3
+      },
+      {
+        "name": "GET /api/events",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 108.1,
+        "p50Ms": 186.8,
+        "p99Ms": 359.5
+      },
+      {
+        "name": "GET /api/recommendations",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 97.3,
+        "p50Ms": 201.2,
+        "p99Ms": 429.9
+      },
+      {
+        "name": "POST /api/emergency",
+        "requests": 500,
+        "errors": 0,
+        "throughputPerSecond": 115.9,
+        "p50Ms": 179.5,
+        "p99Ms": 316.3
+      }
+    ]
+  }
+}
