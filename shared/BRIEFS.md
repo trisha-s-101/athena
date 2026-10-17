@@ -114,7 +114,7 @@ Everyone reads `CONTRACT.md` first. Each brief says what you own, what you consu
 - **+1h:** Work through `INSTANCE_SETUP.md` Parts 0–7 and post the report in the group chat. Send the database password to Neil privately.
 - **+1h30:** Get the judging criteria and submission requirements from the organizers. Share them with the team and check them against the contract's definition of done.
 - **From +4h:** Whenever Neil says there's a new version, run the deploy routine in `INSTANCE_SETUP.md` Part 8.
-- **+4h:** Slide outline: the problem (platelets last 7 days, waste and shortages coexist), why now (hospitals track units internally but nothing sees across them), the solution, live demo, results, why IBM Z, limitations, next steps.
+- **+4h:** Slide outline: the problem (platelets last 5 days, waste and shortages coexist), why now (hospitals track units internally but nothing sees across them), the solution, live demo, results, why IBM Z, limitations, next steps.
 - **+10h:** Draft demo script built around one story: a unit about to expire at a small hospital, a busy hospital about to run short, the exchange spotting it, reserve, complete. Then an emergency request.
 - **+16h:** Test the dashboard as a user. File clear bug reports to Person 4 (what you clicked, what you expected, what happened).
 - **+20h onward:** Final slides with real numbers from Persons 2 and 5 and Neil's benchmark. Run two full timed rehearsals. Record a backup video of the demo working.

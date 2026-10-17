@@ -23,7 +23,7 @@ def makeUnit(unitId, hospitalId="H01", bloodGroup="A+", hoursLeft=24,
     expiryTime = nowTime + timedelta(hours=hoursLeft)
     return {
         "unitId": unitId, "hospitalId": hospitalId, "bloodGroup": bloodGroup,
-        "collectedAt": (expiryTime - timedelta(days=7)).isoformat().replace("+00:00", "Z"),
+        "collectedAt": (expiryTime - timedelta(days=5)).isoformat().replace("+00:00", "Z"),
         "expiresAt": expiryTime.isoformat().replace("+00:00", "Z"), "status": status,
     }
 
