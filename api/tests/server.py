@@ -24,7 +24,7 @@ class ServerTestCase(unittest.TestCase):
     def startServer(cls):
         port = findFreePort()
         cls.baseUrl = f"http://127.0.0.1:{port}/api"
-        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
         cls.server = uvicorn.Server(config)
         cls.thread = threading.Thread(target=cls.server.run, daemon=True)
         cls.thread.start()
