@@ -1,4 +1,4 @@
-"""Example payloads from CONTRACT.md sections 5 and 8.
+"""Example payloads from contract sections 5 and 8.
 
 The API stub returns these, and exportMocks.py writes them to web/mock/,
 so the stub and the dashboard mocks can never drift apart.

@@ -1,4 +1,4 @@
-"""Race many concurrent reservations for one unit (CONTRACT.md section 8 correctness rule, section 12 item 5).
+"""Race many concurrent reservations for one unit (contract section 8 correctness rule, section 12 item 5).
 
 Exactly one request must get 201 and every other one 409. Results go to the reserveRace section
 of results/benchmark.json.

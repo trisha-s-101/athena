@@ -36,7 +36,7 @@ _MIN_STOCK_THRESHOLD = 0.5
 # Emergencies: a major haemorrhage pulls several units of one group at once
 # and empties that shelf. Rate scales with hospital size via dailyDemandMean,
 # so a large centre sees roughly one every two weeks.
-# PLACEHOLDER VALUES -- Person 5 to source these in docs/assumptions.md.
+# PLACEHOLDER VALUES -- to be sourced in docs/assumptions.md.
 _EMERGENCY_RATE_DIVISOR = 100.0
 _EMERGENCY_UNITS_MIN = 3
 _EMERGENCY_UNITS_MAX = 6
