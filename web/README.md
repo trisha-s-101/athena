@@ -1,6 +1,6 @@
 # Platelet Exchange dashboard
 
-Person 4 implementation of contract v1.1, sections 5 and 8. Copy this entire `web/` folder into the team repository. No build step or Python dependencies are required.
+Dashboard for the platelet exchange: plain HTML, CSS and JavaScript. No build step or Python dependencies are required.
 
 ## Preview
 
@@ -46,4 +46,3 @@ node --test web/tests/*.test.js
 
 Tests cover mock reservation conflict and handoff, emergency filtering, API error propagation, UTC expiry colors, escaped text, shelf life, and simulation totals. They do not substitute for Neil's database reservation benchmark.
 
-Suggested PR summary: `Implement Person 4 dashboard with mock/live HTTP workflows matching contract v1.1 sections 5 and 8.`

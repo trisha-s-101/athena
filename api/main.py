@@ -1,4 +1,4 @@
-"""Platelet exchange HTTP API (CONTRACT.md section 8).
+"""Platelet exchange HTTP API (contract section 8).
 
 Every endpoint reads Postgres except /simulation/results and /benchmark/results, which serve
 results/comparison.json and results/benchmark.json. /recommendations and /emergency

@@ -1,4 +1,4 @@
-"""Builds the engine's inputs (CONTRACT.md section 6) from the database and shared/compatibility.json.
+"""Builds the engine's inputs (contract section 6) from the database and shared/compatibility.json.
 
 The engine is pure, so the API gathers everything it needs here and passes plain dicts and lists.
 """
@@ -14,7 +14,7 @@ historyDays = 28  # Four weeks gives the weekday forecaster each weekday up to f
 
 
 def loadCompatibility() -> dict:
-    """Read on every call: the file is tiny, and edits by Person 5 apply without a restart."""
+    """Read on every call: the file is tiny, and edits apply without a restart."""
     return json.loads(compatibilityPath.read_text())
 
 

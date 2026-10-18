@@ -1,4 +1,4 @@
-"""Throughput and p50/p99 latency for the main API endpoints (CONTRACT.md section 12 item 5).
+"""Throughput and p50/p99 latency for the main API endpoints (contract section 12 item 5).
 
 Results go to the latency section of results/benchmark.json.
 

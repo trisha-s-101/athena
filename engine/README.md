@@ -1,6 +1,6 @@
 # Forecasting and optimization engine
 
-Person 3's implementation of `shared/CONTRACT.md` section 6. Uses only the
+Implementation of contract section 6. Uses only the
 Python standard library and exports these functions:
 
 ```python
@@ -83,7 +83,7 @@ horizon; callers must supply forecasts for every hospital they want protected.
 
 The exact contract signature does not accept assumptions. The routine limits
 are therefore the contract v1.1 section 4 values in `engine/_common.py`, with no
-file reads or mutable configuration. If Person 5 changes those values, coordinate
+file reads or mutable configuration. If those values change, coordinate
 with Neil to update these constants or revise the contract to pass configuration.
 
 ## Emergency ranking
@@ -116,13 +116,13 @@ and directed routes, expiry/arrival timing, threshold boundaries, duplicate IDs,
 emergency ordering, deterministic results, and input immutability. A seeded
 mixed-stock fixture also checks recommendation invariants.
 
-For Person 2: call the functions directly, pass the simulation clock as `now`,
+From the simulator: call the functions directly, pass the simulation clock as `now`,
 and provide only completed historical days to forecasting. No simulator or
 comparison results exist in this checkout yet. Waste and shortage improvements
 across simulation seeds remain to be measured jointly; the unit tests do not
 establish the team's simulation acceptance criterion.
 
-For Person 6's pitch: "We forecast each hospital's demand with a Bayesian model
+For the pitch: "We forecast each hospital's demand with a Bayesian model
 that learns from its history and borrows strength from similar hospitals where
 data is thin, protect units it is expected to need, and move surplus stock nearing
 expiry to compatible hospitals with a predicted shortfall. Courier travel and

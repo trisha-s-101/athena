@@ -1,4 +1,4 @@
-"""Postgres access for the API. Only api/ talks to the database (CONTRACT.md section 2, rule 2).
+"""Postgres access for the API. Only api/ talks to the database (contract section 2, rule 2).
 
 The pool is created on first use from DATABASE_URL, so the app still starts (and /health
 still answers) when the database is down or the variable is missing.

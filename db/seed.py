@@ -1,4 +1,4 @@
-"""Create the schema and load shared/hospitals.json and shared/travelTimes.json (CONTRACT.md section 9).
+"""Create the schema and load shared/hospitals.json and shared/travelTimes.json (contract section 9).
 
 Run from the repo root with DATABASE_URL set:
     python -m db.seed            # create missing tables, then insert or update hospitals and travel times
@@ -48,7 +48,7 @@ class SeedError(Exception):
 
 def loadJsonFile(path: Path):
     if not path.exists():
-        raise SeedError(f"Missing {path}. It belongs to Person 5 (shared/); see CONTRACT.md section 4.")
+        raise SeedError(f"Missing {path}. Expected in shared/.")
     try:
         return json.loads(path.read_text())
     except json.JSONDecodeError as error:

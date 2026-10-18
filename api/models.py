@@ -1,4 +1,4 @@
-"""Request body shapes from CONTRACT.md sections 5 and 8."""
+"""Request body shapes from contract sections 5 and 8."""
 
 from typing import Annotated, Literal, Union
 
