@@ -258,8 +258,8 @@ Tables: `hospitals`, `travel_times`, `units`, `reservations`, `events`.
 
 ```
 platelet-exchange/
-  CLAUDE.md (copy of AGENTS.md)   README.md
-  shared/       CONTRACT.md  AGENTS.md  BRIEFS.md  INSTANCE_SETUP.md
+  README.md
+  shared/       CONTRACT.md  INSTANCE_SETUP.md
                 hospitals.json  travelTimes.json  compatibility.json  assumptions.json
   db/           schema.sql  seed.py
   api/          (FastAPI app)
